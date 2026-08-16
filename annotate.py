@@ -396,7 +396,7 @@ import base64
 
 def get_trained_model():
     """載入最新微調模型或預訓練基底模型"""
-    best_weights = "runs/detect/custom_angelfish_model/weights/best.pt"
+    best_weights = os.path.join(BASE_DIR, "runs", "detect", "custom_angelfish_model", "weights", "best.pt")
     if os.path.exists(best_weights):
         weights_path = best_weights
     else:
@@ -428,7 +428,7 @@ def test_image_model():
     if frame is None:
         return jsonify({'status': 'error', 'message': '讀取影像失敗'}), 400
 
-    results = model(frame, conf=0.25)
+    results = model(frame, conf=0.25, verbose=False)
     detections = []
     
     for r in results:
@@ -471,22 +471,16 @@ def test_image_model():
     })
 
 def generate_test_stream_frames(source_str):
-    """即時鏡頭 AI 模型推論串流影格生成器"""
-    if isinstance(source_str, str) and source_str.isdigit():
-        cam_source = int(source_str)
-    else:
-        cam_source = source_str
+    """即時鏡頭 AI 模型推論串流影格生成器 (透過 cam_stream_mgr 零衝突共用鏡頭)"""
+    if source_str:
+        cam_stream_mgr.set_source(source_str)
 
     model, weights_name = get_trained_model()
 
-    cap = cv2.VideoCapture(cam_source)
-    if not cap.isOpened() and isinstance(cam_source, str) and cam_source != 0:
-        cap = cv2.VideoCapture(0)
-
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret:
+            frame = cam_stream_mgr.get_frame()
+            if frame is None:
                 time.sleep(0.05)
                 continue
 
@@ -518,17 +512,14 @@ def generate_test_stream_frames(source_str):
             frame_bytes = buffer.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(0.03)
+            time.sleep(0.033)
     except Exception:
         pass
-    finally:
-        if cap and cap.isOpened():
-            cap.release()
 
 @app.route('/test_video_feed')
 def test_video_feed():
     """即時鏡頭 AI 偵測推論串流 (MJPEG)"""
-    source = request.args.get('source', '0')
+    source = request.args.get('source', 'http://192.168.0.120:4747/video')
     return Response(generate_test_stream_frames(source), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
