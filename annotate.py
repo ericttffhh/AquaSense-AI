@@ -430,19 +430,37 @@ def test_image_model():
     })
 
 def generate_test_stream_frames(source_str):
-    """即時鏡頭 AI 模型推論串流影格生成器 (安全按需連線，結束自動釋放)"""
+    """即時鏡頭 AI 模型推論串流影格生成器 (具備智慧 IP 探測與狀態畫面)"""
     cam_source = int(source_str) if (isinstance(source_str, str) and source_str.isdigit()) else source_str
     
     cap = cv2.VideoCapture(cam_source)
-    if not cap.isOpened() and isinstance(cam_source, str) and cam_source != '0':
-        cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        # 自動嘗試客戶端手機 IP 與備援 IP
+        for alt in [f"http://192.168.0.116:4747/video", f"http://192.168.0.120:4747/video", 0]:
+            try:
+                temp_cap = cv2.VideoCapture(alt)
+                if temp_cap.isOpened():
+                    ret, tf = temp_cap.read()
+                    if ret and tf is not None:
+                        cap = temp_cap
+                        break
+                    temp_cap.release()
+            except Exception:
+                pass
 
     model, weights_name = get_trained_model()
 
     try:
         while True:
-            if not cap.isOpened():
-                time.sleep(0.1)
+            if not cap or not cap.isOpened():
+                # 繪製等待鏡頭連線的提示畫面
+                blank = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(blank, "Waiting for DroidCam / Webcam...", (80, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 229, 255), 2)
+                cv2.putText(blank, "Please keep DroidCam App ON and check Wi-Fi IP", (60, 260), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (160, 160, 160), 1)
+                _, buffer = cv2.imencode('.jpg', blank, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                time.sleep(0.5)
                 continue
 
             ret, frame = cap.read()
