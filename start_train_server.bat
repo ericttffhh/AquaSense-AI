@@ -6,8 +6,6 @@ echo ===================================================================
 echo   AquaSense AI - Windows RTX 3060 Wireless Training Server
 echo ===================================================================
 echo.
-echo Starting GPU Training Server on Port 5002...
-echo.
 
 set PY_EXE=python
 if exist ".venv\Scripts\python.exe" (
@@ -17,6 +15,18 @@ if exist ".venv\Scripts\python.exe" (
 )
 
 echo Using Python: %PY_EXE%
+
+echo Checking AI dependencies (ultralytics, torch, flask)...
+%PY_EXE% -c "import ultralytics, torch, flask" 2>nul
+if %errorlevel% neq 0 (
+    echo.
+    echo [INFO] Missing required packages. Installing ultralytics and dependencies...
+    %PY_EXE% -m pip install --upgrade pip
+    %PY_EXE% -m pip install -r requirements.txt
+)
+
+echo.
+echo Starting GPU Training Server on Port 5002...
 %PY_EXE% train_server.py
 
 if %errorlevel% neq 0 (
