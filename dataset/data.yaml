@@ -1,4 +1,4 @@
-path: /Users/test/Desktop/fish/dataset
+path: dataset
 train: images/train
 val: images/train
 names:

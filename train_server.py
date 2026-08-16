@@ -64,8 +64,23 @@ def run_training_job():
 
     try:
         from ultralytics import YOLO
+        import yaml
         
-        yaml_path = os.path.join(BASE_DIR, "dataset", "data.yaml")
+        dataset_dir = os.path.abspath(os.path.join(BASE_DIR, "dataset"))
+        yaml_path = os.path.join(dataset_dir, "data.yaml")
+        data_cfg = {
+            'path': dataset_dir,
+            'train': 'images/train',
+            'val': 'images/train',
+            'names': {
+                0: 'koi_angelfish',
+                1: 'marble_angelfish',
+                2: 'silver_titan_angelfish'
+            }
+        }
+        with open(yaml_path, 'w', encoding='utf-8') as yf:
+            yaml.dump(data_cfg, yf, sort_keys=False)
+
         base_weights = BEST_WEIGHTS if os.path.exists(BEST_WEIGHTS) else "yolov8n.pt"
         
         cuda_ok = torch.cuda.is_available()

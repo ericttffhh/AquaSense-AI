@@ -3,11 +3,24 @@ import os
 
 print("🚀 開始訓練神仙魚專屬 AI 深度學習模型 (Angelfish Custom YOLO)...")
 
-# 檢查 dataset.yaml 是否存在
-yaml_path = "dataset/data.yaml"
-if not os.path.exists(yaml_path):
-    print(f"❌ 找不到 {yaml_path}！請先將標註完成的資料集放入 dataset/ 目錄下。")
-    exit(1)
+import yaml
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+dataset_dir = os.path.abspath(os.path.join(base_dir, "dataset"))
+yaml_path = os.path.join(dataset_dir, "data.yaml")
+
+data_cfg = {
+    'path': dataset_dir,
+    'train': 'images/train',
+    'val': 'images/train',
+    'names': {
+        0: 'koi_angelfish',
+        1: 'marble_angelfish',
+        2: 'silver_titan_angelfish'
+    }
+}
+with open(yaml_path, 'w', encoding='utf-8') as yf:
+    yaml.dump(data_cfg, yf, sort_keys=False)
 
 # 檢查是否已有原本訓練好的模型權重
 existing_weights = "runs/detect/custom_angelfish_model/weights/best.pt"
