@@ -93,19 +93,33 @@ def run_training_job():
         
         model = YOLO(base_weights)
 
-        # 註冊 YOLOv8 即時進度回呼函數 (即時更新至終端機與 Mac 端)
+        # 註冊 YOLOv8 即時進度回呼函數 (即時更新至終端機與 Mac 端，安全解析防呆)
         def on_fit_epoch_end(trainer):
-            epoch = trainer.epoch + 1
-            total_epochs = trainer.epochs
-            pct = int((epoch / total_epochs) * 100)
-            
-            loss_box = float(trainer.loss_items[0]) if len(trainer.loss_items) > 0 else 0.0
-            loss_cls = float(trainer.loss_items[1]) if len(trainer.loss_items) > 1 else 0.0
-            
-            progress_msg = f"⚡ [RTX 3060 訓練中] Epoch [{epoch:02d}/{total_epochs:02d}] ({pct}%) | Box Loss: {loss_box:.3f} | Cls Loss: {loss_cls:.3f}"
-            print(progress_msg)
-            training_status["log"] = progress_msg
-            training_status["progress"] = pct
+            try:
+                epoch = trainer.epoch + 1
+                total_epochs = trainer.epochs
+                pct = int((epoch / total_epochs) * 100)
+                
+                loss_info = []
+                if hasattr(trainer, 'loss_items'):
+                    li = trainer.loss_items
+                    if isinstance(li, dict):
+                        for k, v in list(li.items())[:2]:
+                            try: loss_info.append(f"{k}: {float(v):.3f}")
+                            except Exception: pass
+                    elif hasattr(li, '__iter__'):
+                        try:
+                            for idx, val in enumerate(list(li)[:2]):
+                                loss_info.append(f"L{idx+1}: {float(val):.3f}")
+                        except Exception: pass
+                
+                loss_str = (" | " + " | ".join(loss_info)) if loss_info else ""
+                progress_msg = f"⚡ [RTX 3060 訓練中] Epoch [{epoch:02d}/{total_epochs:02d}] ({pct}%){loss_str}"
+                print(progress_msg)
+                training_status["log"] = progress_msg
+                training_status["progress"] = pct
+            except Exception as cb_e:
+                pass
 
         model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
 
