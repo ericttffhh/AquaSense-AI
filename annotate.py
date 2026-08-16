@@ -71,69 +71,22 @@ def api_cameras():
         })
     return jsonify({'cameras': available_cams})
 
-class StreamCaptureManager:
-    """單一長效鏡頭串流管理器 (徹底避免 DroidCam 單一連線被佔用衝突)"""
-    def __init__(self):
-        self.current_source = 'http://192.168.0.120:4747/video'
-        self.cap = None
-        self.latest_frame = None
-        self.lock = threading.Lock()
-        self.running = True
-        self.thread = threading.Thread(target=self._update_loop, daemon=True)
-        self.thread.start()
-
-    def set_source(self, source):
-        if not source: return
-        with self.lock:
-            if str(self.current_source) != str(source):
-                self.current_source = source
-                if self.cap:
-                    try: self.cap.release()
-                    except Exception: pass
-                self.cap = None
-
-    def _update_loop(self):
-        while self.running:
-            if not self.current_source:
-                time.sleep(0.05)
-                continue
-
-            with self.lock:
-                src = self.current_source
-                if self.cap is None or not self.cap.isOpened():
-                    target = int(src) if (isinstance(src, str) and src.isdigit()) else src
-                    try:
-                        self.cap = cv2.VideoCapture(target)
-                    except Exception:
-                        self.cap = None
-
-            if self.cap and self.cap.isOpened():
-                ret, frame = self.cap.read()
-                if ret and frame is not None:
-                    with self.lock:
-                        self.latest_frame = frame
-                else:
-                    time.sleep(0.01)
-            else:
-                time.sleep(0.1)
-
-    def get_frame(self):
-        with self.lock:
-            if self.latest_frame is not None:
-                return self.latest_frame.copy()
-            return None
-
-cam_stream_mgr = StreamCaptureManager()
-
 def generate_preview_frames(source_str):
-    """即時鏡頭串流影格生成器 (共用單一鏡頭通道)"""
-    if source_str:
-        cam_stream_mgr.set_source(source_str)
+    """即時鏡頭串流影格生成器 (安全按需連線，結束自動釋放)"""
+    cam_source = int(source_str) if (isinstance(source_str, str) and source_str.isdigit()) else source_str
+    
+    cap = cv2.VideoCapture(cam_source)
+    if not cap.isOpened() and isinstance(cam_source, str) and cam_source != '0':
+        cap = cv2.VideoCapture(0)
 
     try:
         while True:
-            frame = cam_stream_mgr.get_frame()
-            if frame is None:
+            if not cap.isOpened():
+                time.sleep(0.1)
+                continue
+
+            ret, frame = cap.read()
+            if not ret or frame is None:
                 time.sleep(0.05)
                 continue
 
@@ -149,6 +102,9 @@ def generate_preview_frames(source_str):
             time.sleep(0.033)
     except Exception:
         pass
+    finally:
+        if cap and cap.isOpened():
+            cap.release()
 
 @app.route('/video_feed')
 def video_feed():
@@ -158,15 +114,14 @@ def video_feed():
 
 @app.route('/api/capture_dataset', methods=['POST'])
 def api_capture_dataset():
-    """從指定鏡頭自動追加採集最新魚隻游動照片 (共用鏡頭通道，零衝突)"""
+    """從指定鏡頭安全採集最新魚隻照片"""
     data = request.json or {}
     source_input = data.get('camera_source') or data.get('stream_url', 'http://192.168.0.120:4747/video')
     num_samples = int(data.get('samples', 50))
     interval = float(data.get('interval', 0.8))
-    clear_old = data.get('clear_old', False) # 預設保留原有樣本
+    clear_old = data.get('clear_old', False)
 
-    if source_input:
-        cam_stream_mgr.set_source(source_input)
+    cam_source = int(source_input) if (isinstance(source_input, str) and source_input.isdigit()) else source_input
 
     if clear_old:
         for f in glob.glob(os.path.join(IMAGE_DIR, "*.jpg")):
@@ -177,7 +132,6 @@ def api_capture_dataset():
             except Exception: pass
         start_idx = 0
     else:
-        # 計算現有最大編號，接續往下編號
         existing_files = glob.glob(os.path.join(IMAGE_DIR, "*.jpg"))
         start_idx = 0
         for f in existing_files:
@@ -186,32 +140,37 @@ def api_capture_dataset():
             if len(parts) >= 2 and parts[-1].isdigit():
                 start_idx = max(start_idx, int(parts[-1]))
 
-    # 等待確認鏡頭已有影格輸出
-    wait_start = time.time()
-    while cam_stream_mgr.get_frame() is None and (time.time() - wait_start < 6.0):
-        time.sleep(0.1)
+    # 等待並建立連線
+    time.sleep(0.3)
+    cap = cv2.VideoCapture(cam_source)
+    if not cap.isOpened():
+        cap = cv2.VideoCapture(0)
 
-    if cam_stream_mgr.get_frame() is None:
+    if not cap.isOpened():
         return jsonify({
             'status': 'error', 
-            'message': f'❌ 無法從鏡頭取得即時影格！請確認手機 DroidCam App 保持開啟並在前景運行。'
+            'message': f'❌ 無法連接鏡頭！請確認 DroidCam App 保持開啟並在前景運行。'
         }), 400
 
     saved_count = 0
     start_time = time.time()
     last_t = 0
-    while saved_count < num_samples and (time.time() - start_time < 120):
-        frame = cam_stream_mgr.get_frame()
-        if frame is None:
-            time.sleep(0.05)
-            continue
-        cur_t = time.time()
-        if cur_t - last_t >= interval: # 依照設定間隔抓取照片
-            last_t = cur_t
-            saved_count += 1
-            file_idx = start_idx + saved_count
-            filename = os.path.join(IMAGE_DIR, f"angelfish_{file_idx:03d}.jpg")
-            cv2.imwrite(filename, frame)
+    try:
+        while saved_count < num_samples and (time.time() - start_time < 120):
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                time.sleep(0.05)
+                continue
+            cur_t = time.time()
+            if cur_t - last_t >= interval:
+                last_t = cur_t
+                saved_count += 1
+                file_idx = start_idx + saved_count
+                filename = os.path.join(IMAGE_DIR, f"angelfish_{file_idx:03d}.jpg")
+                cv2.imwrite(filename, frame)
+    finally:
+        if cap and cap.isOpened():
+            cap.release()
 
     total_now = len(glob.glob(os.path.join(IMAGE_DIR, "*.jpg")))
     return jsonify({
@@ -471,16 +430,23 @@ def test_image_model():
     })
 
 def generate_test_stream_frames(source_str):
-    """即時鏡頭 AI 模型推論串流影格生成器 (透過 cam_stream_mgr 零衝突共用鏡頭)"""
-    if source_str:
-        cam_stream_mgr.set_source(source_str)
+    """即時鏡頭 AI 模型推論串流影格生成器 (安全按需連線，結束自動釋放)"""
+    cam_source = int(source_str) if (isinstance(source_str, str) and source_str.isdigit()) else source_str
+    
+    cap = cv2.VideoCapture(cam_source)
+    if not cap.isOpened() and isinstance(cam_source, str) and cam_source != '0':
+        cap = cv2.VideoCapture(0)
 
     model, weights_name = get_trained_model()
 
     try:
         while True:
-            frame = cam_stream_mgr.get_frame()
-            if frame is None:
+            if not cap.isOpened():
+                time.sleep(0.1)
+                continue
+
+            ret, frame = cap.read()
+            if not ret or frame is None:
                 time.sleep(0.05)
                 continue
 
@@ -515,6 +481,9 @@ def generate_test_stream_frames(source_str):
             time.sleep(0.033)
     except Exception:
         pass
+    finally:
+        if cap and cap.isOpened():
+            cap.release()
 
 @app.route('/test_video_feed')
 def test_video_feed():
