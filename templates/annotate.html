@@ -847,9 +847,10 @@
 
             btnStartCaptureFromCam.disabled = true;
             btnStartCaptureFromCam.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 鏡頭拍照採集進行中...';
-            
-            // 先關閉預覽以避免 Cap 設備衝突
+
+            // 先關閉預覽以平滑釋放 DroidCam 單一連線通道
             previewFeedImg.src = '';
+            await new Promise(r => setTimeout(r, 600));
 
             try {
                 const res = await fetch('/api/capture_dataset', {

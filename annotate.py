@@ -146,13 +146,19 @@ def api_capture_dataset():
             if len(parts) >= 2 and parts[-1].isdigit():
                 start_idx = max(start_idx, int(parts[-1]))
 
-    # 等待並建立連線
-    time.sleep(0.3)
-    cap = cv2.VideoCapture(cam_source)
-    if not cap.isOpened():
-        cap = cv2.VideoCapture(0)
+    # 等待並重試建立連線 (確保 DroidCam 單一連線通道已完全釋放)
+    cap = None
+    for attempt in range(5):
+        time.sleep(0.3)
+        c = cv2.VideoCapture(cam_source)
+        if c.isOpened():
+            ret, test_f = c.read()
+            if ret and test_f is not None:
+                cap = c
+                break
+            c.release()
 
-    if not cap.isOpened():
+    if cap is None or not cap.isOpened():
         return jsonify({
             'status': 'error', 
             'message': f'❌ 無法連接鏡頭！請確認 DroidCam App 保持開啟並在前景運行。'
