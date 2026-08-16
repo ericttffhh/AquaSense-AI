@@ -880,9 +880,20 @@
         const lblModelWeightsInfo = document.getElementById('lblModelWeightsInfo');
         let testImageIndex = 0;
 
+        async function fetchModelInfo() {
+            try {
+                const res = await fetch('/api/model_info');
+                const data = await res.json();
+                if (data.status === 'success') {
+                    lblModelWeightsInfo.innerText = `🎯 載入模型: ${data.weights_name}`;
+                }
+            } catch(e) {}
+        }
+
         btnOpenTestModal.addEventListener('click', () => {
             testModelModal.style.display = 'flex';
             testImageIndex = currentIndex;
+            fetchModelInfo();
             switchTestTab('photo');
         });
 

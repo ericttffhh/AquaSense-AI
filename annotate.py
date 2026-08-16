@@ -431,6 +431,19 @@ def test_image_model():
         'image_data': f"data:image/jpeg;base64,{base64_img}"
     })
 
+@app.route('/api/model_info')
+def api_model_info():
+    """回傳當前載入的 AI 模型權重資訊與類別清單"""
+    model, weights_name = get_trained_model()
+    is_custom = "best.pt" in str(weights_name)
+    names_dict = model.names if (model and hasattr(model, 'names')) else {0: 'koi_angelfish', 1: 'marble_angelfish', 2: 'silver_titan_angelfish'}
+    return jsonify({
+        'status': 'success',
+        'weights_name': os.path.basename(weights_name) if weights_name else 'best.pt',
+        'is_custom': is_custom,
+        'classes': names_dict
+    })
+
 def generate_test_stream_frames(source_str):
     """即時鏡頭 AI 模型推論串流影格生成器 (具備智慧 IP 探測與狀態畫面)"""
     cam_source = int(source_str) if (isinstance(source_str, str) and source_str.isdigit()) else source_str
