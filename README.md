@@ -201,6 +201,17 @@ AquaSense-AI/
 
 ---
 
+## 📬 聯絡資訊與交流 (Contact & Support)
+
+如果您在使用過程中有任何問題、改進建議或商業合作意向，歡迎透過以下方式聯繫作者：
+
+- **GitHub 個人主頁**：[@ericttffhh](https://github.com/ericttffhh)
+- **專案 Issue 回報**：[Issues / Bug Reports](https://github.com/ericttffhh/AquaSense-AI/issues)
+- **專案討論區**：[Discussions / Feature Requests](https://github.com/ericttffhh/AquaSense-AI/discussions)
+- **電子郵件 (Email)**：`eric961230146@gmail.com` *(歡迎替換為您的常用信箱)*
+
+---
+
 ## 📄 授權條款 (License)
 
 本專案採用 **[MIT License](LICENSE)** 開源授權，歡迎學術研究、個人水族愛好與商業衍生應用。
