@@ -208,7 +208,7 @@ AquaSense-AI/
 - **GitHub 個人主頁**：[@ericttffhh](https://github.com/ericttffhh)
 - **專案 Issue 回報**：[Issues / Bug Reports](https://github.com/ericttffhh/AquaSense-AI/issues)
 - **專案討論區**：[Discussions / Feature Requests](https://github.com/ericttffhh/AquaSense-AI/discussions)
-- **電子郵件 (Email)**：`eric961230146@gmail.com` *(歡迎替換為您的常用信箱)*
+- **電子郵件 (Email)**：[eric961230146@gmail.com](mailto:eric961230146@gmail.com)
 
 ---
 
