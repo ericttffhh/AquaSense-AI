@@ -41,6 +41,10 @@ def index():
     images = get_image_list()
     return render_template('annotate.html', total_images=len(images))
 
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
+
 @app.route('/api/cameras')
 def api_cameras():
     """自動偵測可用的本地 USB 鏡頭與預設 IP 鏡頭選項"""
