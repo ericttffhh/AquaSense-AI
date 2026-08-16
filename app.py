@@ -613,7 +613,7 @@ class CameraStreamManager:
             cv2.putText(frame, label_main, (x + 3, max(y - 18, 14)), cv2.FONT_HERSHEY_SIMPLEX, 0.42, box_col, 1)
             cv2.putText(frame, label_sub, (x + 3, max(y - 4, 28)), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 210, 255), 1)
 
-            # 更新個別檔案統計 (含真實毫米體長估算)
+            # 更新個別檔案統計 (含真實毫米體長估算與即時動態健康評分)
             if prof_id in self.fish_profiles:
                 prof = self.fish_profiles[prof_id]
                 prof["dist_m"] = round(prof["dist_m"] + tf.speed * 0.0003, 2)
@@ -621,10 +621,62 @@ class CameraStreamManager:
                 prof["length_mm"] = round(max(w, h) * 0.42, 1) # 像素-毫米校準
                 
                 tot_depth = sum(tf.depth_stats.values()) or 1
-                prof["top_pct"] = int((tf.depth_stats["top"] / tot_depth) * 100)
-                prof["mid_pct"] = int((tf.depth_stats["mid"] / tot_depth) * 100)
-                prof["bot_pct"] = int((tf.depth_stats["bottom"] / tot_depth) * 100)
+                top_p = int((tf.depth_stats["top"] / tot_depth) * 100)
+                mid_p = int((tf.depth_stats["mid"] / tot_depth) * 100)
+                bot_p = int((tf.depth_stats["bottom"] / tot_depth) * 100)
+                prof["top_pct"] = top_p
+                prof["mid_pct"] = mid_p
+                prof["bot_pct"] = bot_p
                 prof["fav_layer"] = tf.depth_layer
+
+                # 🧠 嚴謹的個別即時動態健康評分演算法 (100分制)
+                score = 100
+                reasons = []
+
+                # 1. 姿態失衡扣分 (最關鍵指標：翻肚、側翻、軀幹嚴重偏斜)
+                if is_abn:
+                    score -= 40
+                    reasons.append("姿態傾斜偏斜")
+
+                # 2. 缺氧浮頭扣分 (水面索氧滯留 > 65%)
+                if top_p > 65:
+                    score -= 25
+                    reasons.append("長時間水面浮頭")
+
+                # 3. 沉底萎靡扣分 (非夜間且均速 < 1.0 px/s 沉底 > 75%)
+                curr_hour = datetime.now().hour
+                is_night = (curr_hour >= 22 or curr_hour < 7)
+                if bot_p > 75 and prof["avg_spd"] < 1.0 and not is_night:
+                    score -= 20
+                    reasons.append("活力低下沉底")
+
+                # 4. 驚恐激游緊迫扣分 (瞬時衝刺速度 > 35 px/s)
+                if tf.speed > 35:
+                    score -= 15
+                    reasons.append("受驚激游衝刺")
+
+                # 5. 環境水質連帶影響扣分
+                if is_turbid:
+                    score -= 5
+                if is_green:
+                    score -= 5
+
+                score = max(10, min(100, score))
+                prof["health_score"] = score
+                
+                # 評定文字與狀態標籤
+                if score >= 90:
+                    prof["health_label"] = "健康良好"
+                    prof["health_color"] = "var(--success)"
+                elif score >= 75:
+                    prof["health_label"] = "亞健康 (注意)"
+                    prof["health_color"] = "var(--warning)"
+                elif score >= 60:
+                    prof["health_label"] = "異常警戒"
+                    prof["health_color"] = "#ff9100"
+                else:
+                    prof["health_label"] = "重度高危"
+                    prof["health_color"] = "var(--danger)"
 
         avg_speed = round(float(np.mean([tf.speed for tf in confirmed_fish])) if confirmed_fish else 0.0, 1)
         activity_score = round(activity_score / 100.0, 1)

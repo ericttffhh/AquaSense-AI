@@ -775,11 +775,15 @@
                         if (p.name.includes('黑神仙')) { borderCol = '#d500f9'; icon = '🐟'; }
                         else if (p.name.includes('銀泰坦')) { borderCol = '#00e5ff'; icon = '✨'; }
 
+                        let badgeBg = p.health_score >= 90 ? 'rgba(0,230,118,0.2)' : (p.health_score >= 75 ? 'rgba(255,179,0,0.2)' : 'rgba(255,50,50,0.2)');
+                        let badgeColor = p.health_score >= 90 ? 'var(--success)' : (p.health_score >= 75 ? 'var(--warning)' : 'var(--danger)');
+                        let label = p.health_label || (p.health_score >= 90 ? '健康良好' : (p.health_score >= 75 ? '亞健康' : '異常警戒'));
+
                         return `
                         <div class="card" style="padding: 10px; border-left: 4px solid ${borderCol}; background: rgba(15, 23, 42, 0.65);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="font-weight: 600; font-size: 0.88rem; color: ${borderCol};">${icon} ${p.name}</span>
-                                <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,230,118,0.2); color: var(--success);">${p.health_score}分 · 正常</span>
+                                <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; font-weight:600;">${p.health_score}分 · ${label}</span>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-top: 6px; font-size: 0.75rem; color: var(--text-sub);">
                                 <div>體長: <b style="color: var(--accent-cyan);">${p.length_mm || 65.0}mm</b></div>
