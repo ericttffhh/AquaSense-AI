@@ -84,7 +84,7 @@ def run_training_job():
         base_weights = BEST_WEIGHTS if os.path.exists(BEST_WEIGHTS) else "yolov8n.pt"
         
         cuda_ok = torch.cuda.is_available()
-        device_choice = 0 if cuda_ok else 'cpu'
+        device_choice = 'cuda:0' if cuda_ok else 'cpu'
         gpu_name = torch.cuda.get_device_name(0) if cuda_ok else "CPU"
         
         init_msg = f"⚡ 使用硬體: {gpu_name} (CUDA: {cuda_ok}) | 基底權重: {os.path.basename(base_weights)}"
@@ -115,6 +115,7 @@ def run_training_job():
             imgsz=640,
             batch=16 if cuda_ok else 8,
             device=device_choice,
+            workers=0,  # Windows 線程中執行 DataLoader 必須設為 0 以防多行程 crash
             name='custom_angelfish_model',
             exist_ok=True,
             verbose=False
@@ -125,9 +126,12 @@ def run_training_job():
         training_status["completed"] = True
         print("\n======================================================\n🎉 訓練完成！已產出最新最優權重 best.pt\n======================================================")
     except Exception as e:
-        training_status["error"] = str(e)
-        training_status["log"] = f"❌ 訓練過程出錯: {str(e)}"
-        print(f"❌ 訓練出錯: {e}")
+        import traceback
+        traceback.print_exc()
+        err_detail = f"{type(e).__name__}: {str(e)}"
+        training_status["error"] = err_detail
+        training_status["log"] = f"❌ 訓練過程出錯: {err_detail}"
+        print(f"❌ 訓練出錯: {err_detail}")
     finally:
         training_status["running"] = False
 
