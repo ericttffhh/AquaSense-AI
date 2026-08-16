@@ -1,0 +1,9 @@
+【macOS 啟動指令】
+主監測系統：.venv/bin/python app.py
+資料標註系統：.venv/bin/python annotate.py
+模型訓練程式：.venv/bin/python train_custom_model.py
+
+【Windows 啟動指令】
+主監測系統：.venv\Scripts\python.exe app.py
+資料標註系統：.venv\Scripts\python.exe annotate.py
+模型訓練程式：.venv\Scripts\python.exe train_custom_model.py

@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaSense AI - 魚缸智慧視覺監控與健康分析系統</title>
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #0a0e17;
+            --card-bg: rgba(18, 26, 43, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f0f4fc;
+            --text-sub: #8ea0be;
+            --accent-cyan: #00d2ff;
+            --accent-blue: #0066ff;
+            --success: #00e676;
+            --warning: #ffb300;
+            --danger: #ff3366;
+            --border-radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 102, 255, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 210, 255, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* 導航列 */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 32px;
+            background: rgba(10, 14, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .quick-camera-panel {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 6px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+
+        .select-source, .input-url {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .select-source:focus, .input-url:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none;
+            color: #fff;
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+        }
+
+        .btn-action:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .status-badge.online {
+            background: rgba(0, 230, 118, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+        }
+
+        .status-badge.offline {
+            background: rgba(255, 51, 102, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        /* 主要佈局 */
+        .container {
+            padding: 24px 32px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            flex: 1;
+        }
+
+        /* 視訊區塊 */
+        .video-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            backdrop-filter: blur(16px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .video-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .video-box {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 440px;
+        }
+
+        .video-box img {
+            width: 100%;
+            height: auto;
+            max-height: 520px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .ai-banner {
+            background: rgba(0, 0, 0, 0.4);
+            border-left: 4px solid var(--accent-cyan);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 側邊卡片網格 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            backdrop-filter: blur(16px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* 10分鐘健康診斷專區 */
+        .health-card {
+            background: linear-gradient(145deg, rgba(18, 26, 43, 0.85), rgba(0, 102, 255, 0.08));
+            border: 1px solid rgba(0, 210, 255, 0.25);
+        }
+
+        .health-score-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+        }
+
+        .health-score-badge {
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 8px;
+        }
+
+        .health-score-badge.good {
+            background: rgba(0, 230, 118, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .health-score-badge.warn {
+            background: rgba(255, 179, 0, 0.15);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        .diagnosis-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .diagnosis-list li {
+            font-size: 0.88rem;
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        /* KPI 網格 */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .kpi-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            padding: 14px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .kpi-title {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+        }
+
+        .kpi-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* 模態框 Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #111726;
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 540px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+        }
+
+        .form-group input, .form-group select {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 頂部導航列 -->
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-fish-fins"></i>
+            <span>AquaSense AI</span>
+        </div>
+
+        <!-- 鏡頭快速切換與重連面板 -->
+        <div class="quick-camera-panel">
+            <select id="quickSourceSelect" class="select-source">
+                <option value="demo">✨ 3D 擬真模擬 (Demo)</option>
+                <option value="ip_camera">📱 DroidCam / IP 鏡頭</option>
+                <option value="webcam">💻 本地 Webcam 鏡頭</option>
+            </select>
+            <input type="text" id="quickStreamUrl" class="input-url" style="width: 220px; display: none;" placeholder="http://192.168.0.X:4747/video">
+            <button id="btnQuickApply" class="btn-action">
+                <i class="fa-solid fa-bolt"></i> 套用切換
+            </button>
+            <button id="btnOpenSettings" class="btn-action btn-secondary" title="開啟完整設定">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div id="badgeCameraStatus" class="status-badge status-connected">
+                <i class="fa-solid fa-circle" style="font-size: 0.6rem;"></i>
+                <span id="lblCameraStatus">連線正常</span>
+            </div>
+            <a href="/api/export_clinical_csv" class="btn-action btn-secondary" style="text-decoration: none;">
+                <i class="fa-solid fa-file-csv" style="color: var(--success);"></i> 臨床 CSV
+            </a>
+            <a href="http://localhost:5001" target="_blank" class="btn-action btn-secondary" style="text-decoration: none;">
+                <i class="fa-solid fa-draw-polygon" style="color: var(--accent-cyan);"></i> 標註與自訓練
+            </a>
+            <button id="btnOpenGallery" class="btn-action btn-secondary">
+                <i class="fa-regular fa-images"></i> 歷史快照
+            </button>
+        </div>
+    </header>
+
+    <!-- 主體內容 -->
+    <div class="container">
+        <!-- 左側視訊與圖表區 -->
+        <div class="video-wrapper">
+            <div class="video-header">
+                <h3><i class="fa-solid fa-video" style="color: var(--accent-cyan);"></i> 即時 AI 視覺感知與姿態追蹤</h3>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button id="btnToggleHeatmap" class="btn-action" style="padding: 4px 12px; font-size: 0.8rem; background: rgba(0, 210, 255, 0.15); border: 1px solid var(--accent-cyan);">
+                        <i class="fa-solid fa-fire-flame-curved" style="color: #ff9100;"></i> <span id="lblHeatmapStatus">開啟熱力圖</span>
+                    </button>
+                    <span id="lblStreamMode" style="font-size: 0.85rem; color: var(--text-sub);">模式: IP 鏡頭</span>
+                </div>
+            </div>
+
+            <div class="video-box">
+                <img id="mainVideoImg" src="/video_feed" alt="Aquarium Live Stream">
+            </div>
+
+            <!-- AI 即時洞察與生態狀態 -->
+            <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 8px;">
+                <div class="ai-banner" style="margin-top: 0;">
+                    <i class="fa-solid fa-brain" style="color: var(--accent-cyan); font-size: 1.2rem;"></i>
+                    <span id="lblAiInsight">自訓練專屬神仙魚 AI 物體辨識模型運作中...</span>
+                </div>
+
+                <div class="ai-banner" style="margin-top: 0; background: rgba(0, 210, 255, 0.08); border-color: rgba(0, 210, 255, 0.2);">
+                    <i class="fa-solid fa-moon" style="color: var(--accent-cyan);"></i>
+                    <span id="lblCircadian">☀️ 日間巡游期</span>
+                </div>
+            </div>
+
+            <!-- 智能索餌飢餓度評估列 -->
+            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 16px; margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-utensils" style="color: #ffb300; font-size: 1.1rem;"></i>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-sub);">智能索餌飢餓度分析</div>
+                        <div id="lblHungerStatus" style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">🟢 飽食悠游中</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 140px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+                        <div id="barHunger" style="width: 35%; height: 100%; background: linear-gradient(90deg, #00e676, #ffb300); transition: width 0.4s;"></div>
+                    </div>
+                    <span id="lblHungerPct" style="font-size: 0.9rem; font-weight: 700; color: var(--accent-cyan);">35%</span>
+                </div>
+            </div>
+
+            <!-- 雙魚獨立個體健康檔案卡 (含毫米體長估算) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+                <div class="card" style="padding: 12px; border-left: 4px solid var(--accent-cyan);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; font-size: 0.95rem;">🐠 神仙魚 #1 (三色神仙)</span>
+                        <span id="p1Score" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,230,118,0.2); color: var(--success);">98分 · 健康</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 8px; font-size: 0.8rem; color: var(--text-sub);">
+                        <div>體長: <b id="p1Len" style="color: var(--accent-cyan);">68.5 mm</b></div>
+                        <div>里程: <b id="p1Dist" style="color: var(--text-main);">0.0 m</b></div>
+                        <div>均速: <b id="p1Spd" style="color: var(--text-main);">0.0 px/s</b></div>
+                        <div>水層: <b id="p1Layer" style="color: var(--text-main);">中層</b></div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 12px; border-left: 4px solid #ab47bc;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; font-size: 0.95rem;">🐟 神仙魚 #2 (黑神仙)</span>
+                        <span id="p2Score" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,230,118,0.2); color: var(--success);">97分 · 健康</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 8px; font-size: 0.8rem; color: var(--text-sub);">
+                        <div>體長: <b id="p2Len" style="color: var(--accent-cyan);">72.0 mm</b></div>
+                        <div>里程: <b id="p2Dist" style="color: var(--text-main);">0.0 m</b></div>
+                        <div>均速: <b id="p2Spd" style="color: var(--text-main);">0.0 px/s</b></div>
+                        <div>水層: <b id="p2Layer" style="color: var(--text-main);">中層</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 歷史生態趨勢圖表 -->
+            <div style="margin-top: 12px; height: 160px;">
+                <canvas id="aquariumChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 右側健康診斷與 KPI 數據 -->
+        <div class="sidebar">
+            <!-- 臨床病理前哨矩陣 (Pre-Clinical Pathology Matrix) -->
+            <div class="card" style="padding: 14px; border-top: 3px solid var(--accent-cyan);">
+                <div class="card-header" style="margin-bottom: 8px;">
+                    <span><i class="fa-solid fa-stethoscope" style="color: var(--accent-cyan);"></i> 臨床病理前哨矩陣</span>
+                    <span style="font-size: 0.75rem; color: var(--success);">實時監控</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+                    <div style="background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px;">
+                        <span style="color: var(--text-sub);">缺氧浮頭風險:</span>
+                        <div id="riskHypoxia" style="font-weight: 600; color: var(--success); margin-top: 2px;">低 (正常)</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px;">
+                        <span style="color: var(--text-sub);">魚鰾失衡風險:</span>
+                        <div id="riskBladder" style="font-weight: 600; color: var(--success); margin-top: 2px;">低 (正常)</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px;">
+                        <span style="color: var(--text-sub);">沉底體力枯竭:</span>
+                        <div id="riskLethargy" style="font-weight: 600; color: var(--success); margin-top: 2px;">低 (正常)</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.25); padding: 8px; border-radius: 6px;">
+                        <span style="color: var(--text-sub);">受驚緊迫激游:</span>
+                        <div id="riskStress" style="font-weight: 600; color: var(--success); margin-top: 2px;">低 (平穩)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 10 分鐘 AI 魚隻健康定時診斷卡片 -->
+            <div class="card health-card">
+                <div class="card-header">
+                    <span><i class="fa-solid fa-heart-pulse" style="color: var(--accent-cyan);"></i> 10 分鐘 AI 健康診斷</span>
+                    <button id="btnManual10MinCheck" class="btn-action" style="padding: 4px 10px; font-size: 0.8rem;">
+                        <i class="fa-solid fa-rotate"></i> 立即分析
+                    </button>
+                </div>
+
+                <div class="health-score-container">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--text-sub);">綜合生態健康評分</div>
+                        <div id="lblReportCountdown" style="font-size: 0.85rem; color: var(--accent-cyan); margin-top: 2px;">
+                            ⏱️ 倒數下一次分析: 10:00
+                        </div>
+                    </div>
+                    <div id="badgeHealthScore" class="health-score-badge good">
+                        95分 · 優良
+                    </div>
+                </div>
+
+                <ul id="listHealthDiagnosis" class="diagnosis-list">
+                    <li>🟢 游動姿態：神仙魚軀幹平衡度良好，姿態平穩。</li>
+                    <li>⚡ 活躍度指數：過去 10 分鐘活力指數 6.5，游動充沛。</li>
+                    <li>💧 生態水質：水質澈亮清晰，透光率優秀。</li>
+                    <li>🐟 實體追蹤：24H 高精準鎖定神仙魚實體。</li>
+                </ul>
+            </div>
+
+            <!-- 即時生態數據 KPI 網格 -->
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fa-solid fa-gauge-high" style="color: var(--accent-cyan);"></i> 即時缸內數據</span>
+                    <span style="font-size: 0.8rem; color: var(--text-sub);">即時更新</span>
+                </div>
+
+                <div class="kpi-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div class="kpi-item">
+                        <span class="kpi-title">神仙魚鎖定數</span>
+                        <span id="valFishCount" class="kpi-value">2 隻</span>
+                    </div>
+                    <div class="kpi-item">
+                        <span class="kpi-title">姿態偏斜警報</span>
+                        <span id="valAbnormalCount" class="kpi-value" style="color: var(--success);">0 隻</span>
+                    </div>
+                    <div class="kpi-item">
+                        <span class="kpi-title">游動均速</span>
+                        <span id="valSpeed" class="kpi-value" style="color: var(--accent-cyan);">0.0 px/s</span>
+                    </div>
+                    <div class="kpi-item">
+                        <span class="kpi-title">雙魚社交間距</span>
+                        <span id="valSpacing" class="kpi-value">0 px</span>
+                    </div>
+                    <div class="kpi-item">
+                        <span class="kpi-title">水質清晰透光</span>
+                        <span id="valClarity" class="kpi-value">95.0</span>
+                    </div>
+                    <div class="kpi-item">
+                        <span class="kpi-title">游動活力指數</span>
+                        <span id="valActivity" class="kpi-value">6.5</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系統完整設定 Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fa-solid fa-gear"></i> 系統進階設定</span>
+                <i id="btnCloseSettings" class="fa-solid fa-xmark" style="cursor: pointer;"></i>
+            </div>
+            <form id="settingsForm">
+                <div class="form-group">
+                    <label>視訊來源模式</label>
+                    <select id="setMode">
+                        <option value="demo">3D 擬真模擬 (Demo)</option>
+                        <option value="ip_camera">DroidCam / IP 網路鏡頭</option>
+                        <option value="webcam">本地 Webcam (Mac/USB)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>DroidCam / 串流網址 (例如: http://192.168.0.120:4747/video)</label>
+                    <input type="text" id="setStreamUrl" placeholder="http://192.168.0.X:4747/video">
+                </div>
+                <div class="form-group">
+                    <label>水質混濁警戒閥值 (Laplacian 邊緣方差)</label>
+                    <input type="number" id="setTurbidityThresh" step="1" value="50">
+                </div>
+                <div class="form-group">
+                    <label>藻類綠水警戒閥值 (Green Channel 均值)</label>
+                    <input type="number" id="setGreenThresh" step="1" value="120">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+                    <button type="button" id="btnCancelSettings" class="btn-action btn-secondary">取消</button>
+                    <button type="submit" class="btn-action"><i class="fa-solid fa-floppy-disk"></i> 儲存並套用</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 快照歷史圖庫 Modal -->
+    <div id="galleryModal" class="modal">
+        <div class="modal-content" style="max-width: 760px; max-height: 80vh; overflow-y: auto;">
+            <div class="modal-header">
+                <span><i class="fa-regular fa-images"></i> 異常事件快照紀錄</span>
+                <i id="btnCloseGallery" class="fa-solid fa-xmark" style="cursor: pointer;"></i>
+            </div>
+            <div id="galleryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 10px;">
+                <!-- 快照動態注入 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化圖表
+        const ctx = document.getElementById('aquariumChart').getContext('2d');
+        const mainVideoImg = document.getElementById('mainVideoImg');
+        
+        // 視訊串流斷線自動防護重連
+        if (mainVideoImg) {
+            mainVideoImg.onerror = () => {
+                setTimeout(() => {
+                    mainVideoImg.src = '/video_feed?t=' + new Date().getTime();
+                }, 800);
+            };
+        }
+        const aquariumChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: '水質清晰度',
+                        data: [],
+                        borderColor: '#00d2ff',
+                        backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '游動活躍度',
+                        data: [],
+                        borderColor: '#00e676',
+                        backgroundColor: 'rgba(0, 230, 118, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#8ea0be', font: { size: 11 } } }
+                },
+                scales: {
+                    x: { ticks: { color: '#8ea0be', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { position: 'left', ticks: { color: '#00d2ff' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y1: { position: 'right', ticks: { color: '#00e676' }, grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+
+        // 快速鏡頭切換 UI 互動
+        const quickSelect = document.getElementById('quickSourceSelect');
+        const quickUrl = document.getElementById('quickStreamUrl');
+        const btnQuickApply = document.getElementById('btnQuickApply');
+
+        quickSelect.addEventListener('change', () => {
+            if (quickSelect.value === 'ip_camera') {
+                quickUrl.style.display = 'inline-block';
+            } else {
+                quickUrl.style.display = 'none';
+            }
+        });
+
+        btnQuickApply.addEventListener('click', async () => {
+            const originalText = btnQuickApply.innerHTML;
+            btnQuickApply.disabled = true;
+            btnQuickApply.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 套用中...';
+
+            const payload = {
+                mode: quickSelect.value,
+                stream_url: quickUrl.value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                // 刷新視訊畫面
+                document.getElementById('mainVideoImg').src = '/video_feed?t=' + new Date().getTime();
+                btnQuickApply.innerHTML = '<i class="fa-solid fa-check"></i> 已切換！';
+                setTimeout(() => {
+                    btnQuickApply.disabled = false;
+                    btnQuickApply.innerHTML = originalText;
+                }, 1000);
+            } catch (e) {
+                alert('切換鏡頭模式失敗，請檢查後端連線。');
+                btnQuickApply.disabled = false;
+                btnQuickApply.innerHTML = originalText;
+            }
+        });
+
+        // 空間熱力圖開關按鈕
+        document.getElementById('btnToggleHeatmap').addEventListener('click', async () => {
+            try {
+                await fetch('/api/toggle_heatmap', { method: 'POST' });
+            } catch (e) {
+                console.error(e);
+            }
+        });
+
+        // 每秒輪詢後端資料
+        setInterval(async () => {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+
+                // 更新 KPI
+                document.getElementById('valFishCount').innerText = `${data.current_fish_count} 隻`;
+                const abnEl = document.getElementById('valAbnormalCount');
+                abnEl.innerText = `${data.abnormal_posture_count} 隻`;
+                abnEl.style.color = data.abnormal_posture_count > 0 ? 'var(--danger)' : 'var(--success)';
+
+                document.getElementById('valSpeed').innerText = `${data.avg_speed || 0.0} px/s`;
+                document.getElementById('valSpacing').innerText = `${data.inter_spacing || 0} px`;
+                document.getElementById('valClarity').innerText = data.current_clarity;
+                document.getElementById('valActivity').innerText = data.current_activity;
+                document.getElementById('lblAiInsight').innerText = data.ai_insight;
+
+                // 晝夜節律與飢餓度更新
+                if (data.circadian_mode) {
+                    document.getElementById('lblCircadian').innerText = data.circadian_mode;
+                }
+                if (data.hunger_status) {
+                    document.getElementById('lblHungerStatus').innerText = data.hunger_status;
+                    document.getElementById('lblHungerPct').innerText = `${data.hunger_index}%`;
+                    document.getElementById('barHunger').style.width = `${data.hunger_index}%`;
+                }
+
+                // 雙魚個別檔案卡更新
+                if (data.fish_profiles && data.fish_profiles.length >= 2) {
+                    const p1 = data.fish_profiles[0];
+                    const p2 = data.fish_profiles[1];
+
+                    document.getElementById('p1Len').innerText = `${p1.length_mm || 68.5} mm`;
+                    document.getElementById('p1Dist').innerText = `${p1.dist_m} m`;
+                    document.getElementById('p1Spd').innerText = `${p1.avg_spd} px/s`;
+                    document.getElementById('p1Layer').innerText = p1.fav_layer.split(' ')[0];
+                    document.getElementById('p1Score').innerText = `${p1.health_score}分 · 正常`;
+
+                    document.getElementById('p2Len').innerText = `${p2.length_mm || 72.0} mm`;
+                    document.getElementById('p2Dist').innerText = `${p2.dist_m} m`;
+                    document.getElementById('p2Spd').innerText = `${p2.avg_spd} px/s`;
+                    document.getElementById('p2Layer').innerText = p2.fav_layer.split(' ')[0];
+                    document.getElementById('p2Score').innerText = `${p2.health_score}分 · 正常`;
+                }
+
+                // 臨床病理前哨矩陣更新
+                if (data.pathology_matrix) {
+                    const pm = data.pathology_matrix;
+                    const elHypo = document.getElementById('riskHypoxia');
+                    elHypo.innerText = pm.hypoxia_risk || '低 (正常)';
+                    elHypo.style.color = pm.hypoxia_risk.includes('高危') ? 'var(--danger)' : 'var(--success)';
+
+                    const elBlad = document.getElementById('riskBladder');
+                    elBlad.innerText = pm.swim_bladder_risk || '低 (正常)';
+                    elBlad.style.color = pm.swim_bladder_risk.includes('高危') ? 'var(--danger)' : 'var(--success)';
+
+                    const elLeth = document.getElementById('riskLethargy');
+                    elLeth.innerText = pm.lethargy_risk || '低 (正常)';
+                    elLeth.style.color = pm.lethargy_risk.includes('警戒') ? 'var(--warning)' : 'var(--success)';
+
+                    const elStress = document.getElementById('riskStress');
+                    elStress.innerText = pm.stress_jerk_risk || '低 (平穩)';
+                    elStress.style.color = pm.stress_jerk_risk.includes('警戒') ? 'var(--warning)' : 'var(--success)';
+                }
+
+                // 空間熱力圖按鈕狀態
+                const btnHeat = document.getElementById('btnToggleHeatmap');
+                const lblHeat = document.getElementById('lblHeatmapStatus');
+                if (data.show_heatmap) {
+                    btnHeat.style.background = 'rgba(255, 145, 0, 0.25)';
+                    btnHeat.style.borderColor = '#ff9100';
+                    lblHeat.innerText = '關閉熱力圖';
+                } else {
+                    btnHeat.style.background = 'rgba(0, 210, 255, 0.15)';
+                    btnHeat.style.borderColor = 'var(--accent-cyan)';
+                    lblHeat.innerText = '開啟熱力圖';
+                }
+
+                // 鏡頭模式標籤
+                const modeMap = { 'demo': '3D 擬真模擬', 'ip_camera': 'DroidCam / IP 鏡頭', 'webcam': '本地 Webcam' };
+                document.getElementById('lblStreamMode').innerText = `模式: ${modeMap[data.mode] || data.mode}`;
+
+                // 鏡頭連線狀態 Badge
+                const badge = document.getElementById('badgeCameraStatus');
+                const lbl = document.getElementById('lblCameraStatus');
+                if (data.camera_connected) {
+                    badge.className = 'status-badge online';
+                    lbl.innerText = '連線正常';
+                } else {
+                    badge.className = 'status-badge offline';
+                    lbl.innerText = '鏡頭斷線/重連中';
+                }
+
+                // 10 分鐘健康報告更新
+                if (data.health_report_10min && data.health_report_10min.diagnosis) {
+                    const rpt = data.health_report_10min;
+                    const badgeScore = document.getElementById('badgeHealthScore');
+                    badgeScore.innerText = `${rpt.health_score}分 · ${rpt.status_label.split(' ')[0]}`;
+                    badgeScore.className = rpt.health_score >= 80 ? 'health-score-badge good' : 'health-score-badge warn';
+
+                    const listEl = document.getElementById('listHealthDiagnosis');
+                    listEl.innerHTML = rpt.diagnosis.map(item => `<li>${item}</li>`).join('');
+                }
+
+                // 圖表更新
+                if (data.timestamps && data.timestamps.length > 0) {
+                    aquariumChart.data.labels = data.timestamps;
+                    aquariumChart.data.datasets[0].data = data.clarity_history;
+                    aquariumChart.data.datasets[1].data = data.activity_history;
+                    aquariumChart.update();
+                }
+
+            } catch (e) {
+                console.error("輪詢視覺數據失敗", e);
+            }
+        }, 1200);
+
+        // 10 分鐘倒數計時器
+        let secondsRemaining = 600;
+        setInterval(() => {
+            secondsRemaining--;
+            if (secondsRemaining <= 0) {
+                secondsRemaining = 600;
+                fetch('/api/health_report_10min?force=true');
+            }
+            const mins = Math.floor(secondsRemaining / 60);
+            const secs = secondsRemaining % 60;
+            document.getElementById('lblReportCountdown').innerText = `⏱️ 倒數下一次分析: ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }, 1000);
+
+        document.getElementById('btnManual10MinCheck').addEventListener('click', async () => {
+            secondsRemaining = 600;
+            const btn = document.getElementById('btnManual10MinCheck');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 分析中...';
+            try {
+                await fetch('/api/health_report_10min?force=true');
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> 已更新';
+                setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-rotate"></i> 立即分析'; }, 1500);
+            } catch (e) {
+                btn.innerHTML = '重試';
+            }
+        });
+
+        // 系統設定 Modal
+        const settingsModal = document.getElementById('settingsModal');
+        document.getElementById('btnOpenSettings').addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/settings');
+                const s = await res.json();
+                document.getElementById('setMode').value = s.mode;
+                document.getElementById('setStreamUrl').value = s.stream_url;
+                document.getElementById('setTurbidityThresh').value = s.turbidity_threshold;
+                document.getElementById('setGreenThresh').value = s.green_threshold;
+
+                // 同步至快速切換欄
+                quickSelect.value = s.mode;
+                quickUrl.value = s.stream_url;
+                quickUrl.style.display = s.mode === 'ip_camera' ? 'inline-block' : 'none';
+            } catch(e) {}
+            settingsModal.classList.add('active');
+        });
+
+        document.getElementById('btnCloseSettings').addEventListener('click', () => settingsModal.classList.remove('active'));
+        document.getElementById('btnCancelSettings').addEventListener('click', () => settingsModal.classList.remove('active'));
+
+        document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 儲存套用中...';
+
+            const payload = {
+                mode: document.getElementById('setMode').value,
+                stream_url: document.getElementById('setStreamUrl').value.trim(),
+                turbidity_threshold: document.getElementById('setTurbidityThresh').value,
+                green_threshold: document.getElementById('setGreenThresh').value
+            };
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                // 刷新視訊畫面
+                document.getElementById('mainVideoImg').src = '/video_feed?t=' + new Date().getTime();
+                
+                // 同步快選欄位
+                quickSelect.value = payload.mode;
+                quickUrl.value = payload.stream_url;
+                quickUrl.style.display = payload.mode === 'ip_camera' ? 'inline-block' : 'none';
+
+                submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> 儲存成功！';
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                    settingsModal.classList.remove('active');
+                }, 600);
+            } catch (err) {
+                console.error('設定儲存錯誤', err);
+                submitBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 儲存失敗';
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }, 1500);
+            }
+        });
+
+        // 圖庫 Modal
+        const galleryModal = document.getElementById('galleryModal');
+        document.getElementById('btnOpenGallery').addEventListener('click', async () => {
+            galleryModal.classList.add('active');
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '<p style="color:var(--text-sub); grid-column:1/-1;">載入快照中...</p>';
+            try {
+                const res = await fetch('/api/snapshots');
+                const data = await res.json();
+                if (!data.snapshots || data.snapshots.length === 0) {
+                    grid.innerHTML = '<p style="color:var(--text-sub); grid-column:1/-1;">目前尚無異常事件快照。</p>';
+                    return;
+                }
+                grid.innerHTML = data.snapshots.map(s => {
+                    const badgeBg = s.severity === 'danger' ? 'rgba(255, 51, 102, 0.2)' : 'rgba(255, 179, 0, 0.2)';
+                    const badgeColor = s.severity === 'danger' ? 'var(--danger)' : '#ffb300';
+                    const badgeBorder = s.severity === 'danger' ? 'rgba(255, 51, 102, 0.4)' : 'rgba(255, 179, 0, 0.4)';
+
+                    return `
+                    <div style="background:rgba(0,0,0,0.5); border:1px solid var(--card-border); border-radius:10px; overflow:hidden; display:flex; flex-direction:column;">
+                        <a href="${s.url}" target="_blank">
+                            <img src="${s.url}" style="width:100%; height:140px; object-fit:cover; display:block; cursor:pointer;" alt="Snapshot">
+                        </a>
+                        <div style="padding:10px; display:flex; flex-direction:column; gap:6px;">
+                            <div style="font-size:0.75rem; font-weight:600; padding:3px 8px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder};">
+                                ${s.reason}
+                            </div>
+                            <div style="font-size:0.72rem; color:var(--text-sub); display:flex; justify-content:space-between;">
+                                <span><i class="fa-regular fa-clock"></i> ${s.timestamp}</span>
+                                <span>透光: ${s.clarity}</span>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            } catch(e) {
+                grid.innerHTML = '<p style="color:var(--danger); grid-column:1/-1;">載入快照失敗。</p>';
+            }
+        });
+
+        document.getElementById('btnCloseGallery').addEventListener('click', () => galleryModal.classList.remove('active'));
+    </script>
+</body>
+</html>

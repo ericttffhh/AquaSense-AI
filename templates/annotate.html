@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaSense AI - 專屬神仙魚標註與自訓練工作台</title>
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-base: #0a0e17;
+            --card-bg: rgba(18, 26, 43, 0.85);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f0f4fc;
+            --text-sub: #8ea0be;
+            --accent-cyan: #00d2ff;
+            --accent-blue: #0066ff;
+            --success: #00e676;
+            --warning: #ffb300;
+            --danger: #ff3366;
+            --border-radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', 'Noto Sans TC', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 102, 255, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(0, 210, 255, 0.1) 0px, transparent 50%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 28px;
+            background: rgba(10, 14, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            border: none;
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #00e676, #00b0ff);
+        }
+
+        .btn-danger {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        .container {
+            padding: 20px 28px;
+            display: grid;
+            grid-template-columns: 260px 1fr 300px;
+            gap: 20px;
+            flex: 1;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--border-radius);
+            backdrop-filter: blur(16px);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* 縮圖列表 */
+        .image-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            max-height: calc(100vh - 160px);
+        }
+
+        .image-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .image-item:hover, .image-item.active {
+            border-color: var(--accent-cyan);
+            background: rgba(0, 210, 255, 0.1);
+        }
+
+        .badge-done {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0, 230, 118, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        /* 標註主畫布 */
+        .canvas-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            user-select: none;
+        }
+
+        #annotationCanvas {
+            max-width: 100%;
+            max-height: 520px;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 16px;
+            border-radius: 10px;
+        }
+
+        /* 標註方框列表 */
+        .box-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .box-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--success);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-draw-polygon"></i>
+            <span>AquaSense 魚隻 AI 標註工作台</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="btnOpenCamModal" class="btn btn-secondary">
+                <i class="fa-solid fa-video"></i> 📸 鏡頭選擇與預覽
+            </button>
+            <button id="btnOpenTestModal" class="btn btn-secondary" style="background: rgba(0, 210, 255, 0.15); border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">
+                <i class="fa-solid fa-bullseye"></i> 🎯 測試 AI 模型成果
+            </button>
+            <button id="btnStartTraining" class="btn btn-success">
+                <i class="fa-solid fa-brain"></i> 🚀 一鍵訓練專屬模型
+            </button>
+            <a href="http://localhost:5000" target="_blank" class="btn btn-secondary">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> 回監控首頁
+            </a>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 左側：影像清單 -->
+        <div class="panel">
+            <div style="font-weight: 600; font-size: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>採集影像清單</span>
+                <span id="lblProgress" style="color: var(--accent-cyan); font-size: 0.85rem;">0 / 50</span>
+            </div>
+            <div id="imageList" class="image-list">
+                <!-- 動態注入 -->
+            </div>
+        </div>
+
+        <!-- 中間：標註畫布 -->
+        <div class="panel" style="gap: 10px;">
+            <div class="toolbar">
+                <div style="font-weight: 600;" id="lblCurrentImage">載入中...</div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btnPrev" class="btn btn-secondary"><i class="fa-solid fa-chevron-left"></i> 上一張</button>
+                    <button id="btnNext" class="btn"><i class="fa-solid fa-chevron-right"></i> 下一張 (空白鍵)</button>
+                </div>
+            </div>
+
+            <div class="canvas-wrapper">
+                <canvas id="annotationCanvas" width="640" height="480"></canvas>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--text-sub); display: flex; justify-content: space-between;">
+                <span>💡 提示：在畫面上按住滑鼠左鍵並拖曳拉出方框，框選魚隻本體。</span>
+                <span>快速鍵：[空白鍵] 下一張 | [C] 清空當前框</span>
+            </div>
+        </div>
+
+        <!-- 右側：當前標註框與訓練狀態 -->
+        <div class="panel">
+            <div style="font-weight: 600; font-size: 1rem;">當前標註類別選擇</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button type="button" id="btnClass0" class="btn" style="background: rgba(0, 230, 118, 0.2); border: 2px solid #00e676; color: #00e676; font-size: 0.8rem; padding: 6px 8px; justify-content: center;">
+                    🐠 三色神仙 (1)
+                </button>
+                <button type="button" id="btnClass1" class="btn" style="background: rgba(213, 0, 249, 0.1); border: 1px solid rgba(213, 0, 249, 0.4); color: #e040fb; font-size: 0.8rem; padding: 6px 8px; justify-content: center;">
+                    🐟 黑神仙 (2)
+                </button>
+            </div>
+
+            <div style="font-weight: 600; font-size: 0.95rem; margin-top: 6px;">已標註方框清單</div>
+            <div id="boxList" class="box-list">
+                <p style="color: var(--text-sub); font-size: 0.85rem;">尚未拉出方框，請在畫面上拖曳拉框。</p>
+            </div>
+
+            <button id="btnClearBoxes" class="btn btn-danger" style="margin-top: 6px;">
+                <i class="fa-solid fa-trash"></i> 清除此張所有方框 (C)
+            </button>
+
+            <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 8px 0;">
+
+            <div style="font-weight: 600; font-size: 0.95rem;">訓練狀態日誌</div>
+            <div id="trainLogBox" style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; font-size: 0.8rem; color: var(--accent-cyan); height: 140px; overflow-y: auto; line-height: 1.4;">
+                尚未開始訓練。標註完成後點擊右上角「一鍵訓練專屬模型」即可開始！
+            </div>
+        </div>
+    </div>
+
+    <!-- 鏡頭切換與預覽 Modal -->
+    <div id="camModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 999; justify-content: center; align-items: center;">
+        <div class="panel" style="width: 720px; max-width: 90vw; border: 1px solid var(--card-border); border-radius: 16px; background: rgba(15, 23, 42, 0.95); box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 12px;">
+                <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-video"></i> AquaSense 鏡頭選擇與即時預覽
+                </div>
+                <i class="fa-solid fa-xmark" id="btnCloseCamModal" style="cursor: pointer; font-size: 1.2rem; color: var(--text-sub);"></i>
+            </div>
+
+            <!-- 鏡頭選單與設定 -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                <div>
+                    <label style="font-size: 0.85rem; color: var(--text-sub); display: block; margin-bottom: 6px;">選擇鏡頭來源：</label>
+                    <select id="camSourceSelect" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
+                        <option value="0">📷 本地 USB Webcam (Index 0)</option>
+                        <option value="http://192.168.0.120:4747/video">📱 DroidCam IP 鏡頭 (192.168.0.120)</option>
+                        <option value="custom">⚙️ 自訂 IP 鏡頭 / RTSP 網址...</option>
+                    </select>
+                </div>
+                <div id="customUrlGroup" style="display: none;">
+                    <label style="font-size: 0.85rem; color: var(--text-sub); display: block; margin-bottom: 6px;">自訂串流網址：</label>
+                    <input type="text" id="customCamUrl" placeholder="http://192.168.1.X:8080/video" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-main); font-size: 0.85rem;">
+                </div>
+            </div>
+
+            <!-- 即時預覽畫面 -->
+            <div style="position: relative; background: #000; border-radius: 12px; overflow: hidden; height: 360px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--card-border); margin-top: 10px;">
+                <img id="previewFeedImg" src="" alt="鏡頭串流載入中..." style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                <div style="position: absolute; top: 12px; left: 12px; background: rgba(0, 230, 118, 0.2); border: 1px solid var(--success); color: var(--success); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span>
+                    即時畫面預覽中
+                </div>
+            </div>
+
+            <!-- 採集設定與按鈕 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--card-border);">
+                <div style="display: flex; gap: 16px; align-items: center; font-size: 0.85rem; color: var(--text-sub);">
+                    <span>拍攝張數：
+                        <select id="sampleCountSelect" style="background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); color: #fff; padding: 4px 8px; border-radius: 6px;">
+                            <option value="20">20 張</option>
+                            <option value="50" selected>50 張</option>
+                            <option value="100">100 張</option>
+                        </select>
+                    </span>
+                    <span>間隔：
+                        <select id="sampleIntervalSelect" style="background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); color: #fff; padding: 4px 8px; border-radius: 6px;">
+                            <option value="0.5">0.5 秒</option>
+                            <option value="0.8" selected>0.8 秒</option>
+                            <option value="1.2">1.2 秒</option>
+                        </select>
+                    </span>
+                </div>
+
+                <button id="btnStartCaptureFromCam" class="btn btn-success">
+                    <i class="fa-solid fa-camera"></i> 依此鏡頭開始拍攝採集
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 模型成果測試 Modal -->
+    <div id="testModelModal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; justify-content: center; align-items: center;">
+        <div class="panel" style="width: 860px; max-width: 95vw; border: 1px solid var(--card-border); border-radius: 16px; background: rgba(15, 23, 42, 0.96); box-shadow: 0 20px 60px rgba(0,0,0,0.9);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 12px;">
+                <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-bullseye"></i> AquaSense AI 專屬模型成果驗證與測試
+                </div>
+                <i class="fa-solid fa-xmark" id="btnCloseTestModal" style="cursor: pointer; font-size: 1.3rem; color: var(--text-sub);"></i>
+            </div>
+
+            <!-- 頁籤與狀態列 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <button id="tabPhotoTest" class="btn btn-secondary" style="border-color: var(--accent-cyan); color: var(--accent-cyan); font-size: 0.85rem;">
+                        <i class="fa-solid fa-image"></i> 照片 AI 推論對比
+                    </button>
+
+                    <button id="tabLiveTest" class="btn btn-secondary" style="font-size: 0.85rem;">
+                        <i class="fa-solid fa-video"></i> 即時鏡頭 AI 偵測
+                    </button>
+                </div>
+                <div id="lblModelWeightsInfo" style="font-size: 0.8rem; background: rgba(0, 210, 255, 0.1); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 4px 10px; border-radius: 6px;">
+                    🎯 使用權重: 載入中...
+                </div>
+            </div>
+
+            <!-- Mode A: 照片測試畫面 -->
+            <div id="photoTestView" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.9rem; color: var(--text-sub);" id="lblTestImageTitle">選擇相片執行 AI 辨識...</div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btnTestPrev" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;"><i class="fa-solid fa-chevron-left"></i> 上一張</button>
+                        <button id="btnTestNext" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;">下一張 <i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <div style="position: relative; background: #000; border-radius: 12px; overflow: hidden; height: 400px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--card-border);">
+                    <img id="testResultImg" src="" alt="點擊執行 AI 推論..." style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 8px;">
+                    <div id="lblDetectionsSummary" style="color: var(--success); font-weight: 600;">AI 偵測結果: 尚未分析</div>
+                    <div style="color: var(--text-sub);">綠框: 三色神仙 | 紫框: 黑神仙</div>
+                </div>
+            </div>
+
+            <!-- Mode B: 即時鏡頭 AI 偵測畫面 -->
+            <div id="liveTestView" style="margin-top: 10px; display: none; flex-direction: column; gap: 10px;">
+                <div style="position: relative; background: #000; border-radius: 12px; overflow: hidden; height: 400px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--card-border);">
+                    <img id="liveTestFeedImg" src="" alt="即時 AI 鏡頭偵測中..." style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                    <div style="position: absolute; top: 12px; left: 12px; background: rgba(0, 210, 255, 0.2); border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent-cyan); display: inline-block;"></span>
+                        YOLO 實時物件偵測中
+                    </div>
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center;">
+                    <span>💡 可直接在標註工作台內觀看訓練後 AI 消除背景靜態物件與游動動態辨識之效果。</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let imagesData = [];
+        let currentIndex = 0;
+        let currentBoxes = []; // [{cls, cx, cy, w, h}] normalized (0~1)
+        let currentClass = 0; // 0: 三色神仙, 1: 黑神仙
+        let isDrawing = false;
+        let startX = 0, startY = 0;
+
+        const canvas = document.getElementById('annotationCanvas');
+        const ctx = canvas.getContext('2d');
+        let currentImageObj = new Image();
+
+        const btnC0 = document.getElementById('btnClass0');
+        const btnC1 = document.getElementById('btnClass1');
+
+        function selectClass(c) {
+            currentClass = c;
+            if (c === 0) {
+                btnC0.style.border = '2px solid #00e676';
+                btnC0.style.background = 'rgba(0, 230, 118, 0.2)';
+                btnC1.style.border = '1px solid rgba(213, 0, 249, 0.4)';
+                btnC1.style.background = 'rgba(213, 0, 249, 0.1)';
+            } else {
+                btnC1.style.border = '2px solid #e040fb';
+                btnC1.style.background = 'rgba(213, 0, 249, 0.25)';
+                btnC0.style.border = '1px solid rgba(0, 230, 118, 0.4)';
+                btnC0.style.background = 'rgba(0, 230, 118, 0.1)';
+            }
+        }
+        btnC0.onclick = () => selectClass(0);
+        btnC1.onclick = () => selectClass(1);
+
+        // 載入影像清單
+        async function fetchImages() {
+            const res = await fetch('/api/images');
+            const data = await res.json();
+            imagesData = data.images;
+            renderImageList();
+            if (imagesData.length > 0) {
+                loadImage(0);
+            }
+        }
+
+        function renderImageList() {
+            const listEl = document.getElementById('imageList');
+            let completedCount = 0;
+            listEl.innerHTML = imagesData.map((img, idx) => {
+                if (img.annotated) completedCount++;
+                return `
+                    <div class="image-item ${idx === currentIndex ? 'active' : ''}" onclick="loadImage(${idx})">
+                        <span>${img.name}</span>
+                        ${img.annotated ? '<span class="badge-done">已標註</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('lblProgress').innerText = `${completedCount} / ${imagesData.length}`;
+        }
+
+        function loadImage(index) {
+            if (index < 0 || index >= imagesData.length) return;
+            currentIndex = index;
+            const imgData = imagesData[index];
+            document.getElementById('lblCurrentImage').innerText = `影像: ${imgData.name} (${index + 1}/${imagesData.length})`;
+            
+            currentBoxes = (imgData.boxes || []).map(b => ({
+                cls: (b.cls !== undefined) ? b.cls : 0,
+                cx: b.cx,
+                cy: b.cy,
+                w: b.w,
+                h: b.h
+            }));
+
+            currentImageObj.src = imgData.url;
+            currentImageObj.onload = () => {
+                canvas.width = currentImageObj.naturalWidth || 640;
+                canvas.height = currentImageObj.naturalHeight || 480;
+                redrawCanvas();
+                renderBoxList();
+                renderImageList();
+            };
+        }
+
+        function redrawCanvas(tempBox = null) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImageObj, 0, 0, canvas.width, canvas.height);
+
+            // 繪製已有方框 (區分三色神仙 vs 黑神仙)
+            currentBoxes.forEach((b, i) => {
+                const x = (b.cx - b.w / 2) * canvas.width;
+                const y = (b.cy - b.h / 2) * canvas.height;
+                const w = b.w * canvas.width;
+                const h = b.h * canvas.height;
+
+                const isKoi = (b.cls === 0);
+                const strokeCol = isKoi ? '#00e676' : '#e040fb';
+                const fillCol = isKoi ? 'rgba(0, 230, 118, 0.2)' : 'rgba(224, 64, 251, 0.2)';
+                const labelText = isKoi ? '🐠 三色神仙' : '🐟 黑神仙';
+
+                ctx.strokeStyle = strokeCol;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, w, h);
+
+                ctx.fillStyle = fillCol;
+                ctx.fillRect(x, y, w, h);
+
+                ctx.fillStyle = strokeCol;
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(labelText, x + 4, y > 20 ? y - 6 : y + 16);
+            });
+
+            // 繪製正在拖曳的暫時方框
+            if (tempBox) {
+                const isKoi = (currentClass === 0);
+                ctx.strokeStyle = isKoi ? '#00e676' : '#e040fb';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(tempBox.x, tempBox.y, tempBox.w, tempBox.h);
+                ctx.fillStyle = isKoi ? 'rgba(0, 230, 118, 0.25)' : 'rgba(224, 64, 251, 0.25)';
+                ctx.fillRect(tempBox.x, tempBox.y, tempBox.w, tempBox.h);
+            }
+        }
+
+        function renderBoxList() {
+            const listEl = document.getElementById('boxList');
+            if (currentBoxes.length === 0) {
+                listEl.innerHTML = '<p style="color: var(--text-sub); font-size: 0.85rem;">尚未拉出方框，請在畫面上拖曳拉框。</p>';
+                return;
+            }
+            listEl.innerHTML = currentBoxes.map((b, i) => {
+                const isKoi = (b.cls === 0);
+                const tagColor = isKoi ? '#00e676' : '#e040fb';
+                const tagText = isKoi ? '🐠 三色神仙' : '🐟 黑神仙';
+                return `
+                <div class="box-item" style="border-left-color: ${tagColor};">
+                    <span style="color: ${tagColor}; font-weight:600;">${tagText} #${i + 1}</span>
+                    <i class="fa-solid fa-xmark" style="cursor:pointer; color:var(--danger);" onclick="deleteBox(${i})"></i>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function deleteBox(index) {
+            currentBoxes.splice(index, 1);
+            redrawCanvas();
+            renderBoxList();
+            saveCurrentLabels();
+        }
+
+        async function saveCurrentLabels() {
+            if (!imagesData[currentIndex]) return;
+            const imgName = imagesData[currentIndex].name;
+            imagesData[currentIndex].boxes = currentBoxes;
+            imagesData[currentIndex].annotated = currentBoxes.length > 0;
+
+            await fetch('/api/save_label', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image_name: imgName, boxes: currentBoxes })
+            });
+            renderImageList();
+        }
+
+        // 滑鼠拉框事件
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            startX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            startY = (e.clientY - rect.top) * (canvas.height / rect.height);
+            isDrawing = true;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const currX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const currY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            const x = Math.min(startX, currX);
+            const y = Math.min(startY, currY);
+            const w = Math.abs(currX - startX);
+            const h = Math.abs(currY - startY);
+
+            redrawCanvas({ x, y, w, h });
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            const rect = canvas.getBoundingClientRect();
+            const endX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const endY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            const x = Math.min(startX, endX);
+            const y = Math.min(startY, endY);
+            const w = Math.abs(endX - startX);
+            const h = Math.abs(endY - startY);
+
+            if (w > 15 && h > 15) {
+                // 轉為 YOLO 格式 (類別 cls, 中心點 cx, cy, 寬度 w, 高度 h，正規化至 0~1)
+                const cx = (x + w / 2) / canvas.width;
+                const cy = (y + h / 2) / canvas.height;
+                const normW = w / canvas.width;
+                const normH = h / canvas.height;
+                currentBoxes.push({ cls: currentClass, cx, cy, w: normW, h: normH });
+                redrawCanvas();
+                renderBoxList();
+                saveCurrentLabels();
+            } else {
+                redrawCanvas();
+            }
+        });
+
+        document.getElementById('btnNext').addEventListener('click', () => {
+            saveCurrentLabels();
+            if (currentIndex < imagesData.length - 1) {
+                loadImage(currentIndex + 1);
+            }
+        });
+
+        document.getElementById('btnPrev').addEventListener('click', () => {
+            saveCurrentLabels();
+            if (currentIndex > 0) {
+                loadImage(currentIndex - 1);
+            }
+        });
+
+        document.getElementById('btnClearBoxes').addEventListener('click', () => {
+            currentBoxes = [];
+            redrawCanvas();
+            renderBoxList();
+            saveCurrentLabels();
+        });
+
+        // 鍵盤快速鍵
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '1') {
+                selectClass(0);
+            } else if (e.key === '2') {
+                selectClass(1);
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                saveCurrentLabels();
+                if (currentIndex < imagesData.length - 1) {
+                    loadImage(currentIndex + 1);
+                }
+            } else if (e.key === 'c' || e.key === 'C') {
+                currentBoxes = [];
+                redrawCanvas();
+                renderBoxList();
+                saveCurrentLabels();
+            }
+        });
+
+        // 一鍵訓練按鈕與狀態輪詢
+        const btnStartTraining = document.getElementById('btnStartTraining');
+        const trainLogBox = document.getElementById('trainLogBox');
+
+        btnStartTraining.addEventListener('click', async () => {
+            btnStartTraining.disabled = true;
+            btnStartTraining.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 訓練進行中...';
+            trainLogBox.innerHTML = "⏳ 正在啟動 YOLOv8 Transfer Learning 訓練...";
+
+            try {
+                await fetch('/api/start_train', { method: 'POST' });
+            } catch(e) {}
+
+            // 輪詢狀態
+            const timer = setInterval(async () => {
+                const res = await fetch('/api/train_status');
+                const st = await res.json();
+                trainLogBox.innerHTML = `<div>${st.log}</div>`;
+                if (!st.running) {
+                    clearInterval(timer);
+                    btnStartTraining.disabled = false;
+                    btnStartTraining.innerHTML = '<i class="fa-solid fa-check"></i> 訓練完成！';
+                }
+            }, 2000);
+        });
+
+        // --- 鏡頭切換與預覽 Modal 控制邏輯 ---
+        const camModal = document.getElementById('camModal');
+        const btnOpenCamModal = document.getElementById('btnOpenCamModal');
+        const btnCloseCamModal = document.getElementById('btnCloseCamModal');
+        const camSourceSelect = document.getElementById('camSourceSelect');
+        const customUrlGroup = document.getElementById('customUrlGroup');
+        const customCamUrl = document.getElementById('customCamUrl');
+        const previewFeedImg = document.getElementById('previewFeedImg');
+        const btnStartCaptureFromCam = document.getElementById('btnStartCaptureFromCam');
+
+        function getActiveCamSource() {
+            const val = camSourceSelect.value;
+            if (val === 'custom') {
+                return customCamUrl.value.trim() || 'http://192.168.0.120:4747/video';
+            }
+            return val;
+        }
+
+        function updatePreviewFeed() {
+            const src = getActiveCamSource();
+            previewFeedImg.src = `/video_feed?source=${encodeURIComponent(src)}&t=${Date.now()}`;
+        }
+
+        async function loadDetectedCameras() {
+            try {
+                const res = await fetch('/api/cameras');
+                const data = await res.json();
+                if (data.cameras && data.cameras.length > 0) {
+                    let html = data.cameras.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                    html += '<option value="custom">⚙️ 自訂 IP 鏡頭 / RTSP 網址...</option>';
+                    camSourceSelect.innerHTML = html;
+                }
+            } catch(e) {}
+        }
+
+        btnOpenCamModal.addEventListener('click', async () => {
+            camModal.style.display = 'flex';
+            await loadDetectedCameras();
+            updatePreviewFeed();
+        });
+
+        btnCloseCamModal.addEventListener('click', () => {
+            camModal.style.display = 'none';
+            previewFeedImg.src = ''; // 停止預覽串流釋放資源
+        });
+
+        camSourceSelect.addEventListener('change', () => {
+            if (camSourceSelect.value === 'custom') {
+                customUrlGroup.style.display = 'block';
+            } else {
+                customUrlGroup.style.display = 'none';
+                updatePreviewFeed();
+            }
+        });
+
+        customCamUrl.addEventListener('change', () => {
+            updatePreviewFeed();
+        });
+
+        // 依當前鏡頭開始拍攝採集
+        btnStartCaptureFromCam.addEventListener('click', async () => {
+            const camSource = getActiveCamSource();
+            const samples = parseInt(document.getElementById('sampleCountSelect').value);
+            const interval = parseFloat(document.getElementById('sampleIntervalSelect').value);
+
+            btnStartCaptureFromCam.disabled = true;
+            btnStartCaptureFromCam.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 鏡頭拍照採集進行中...';
+            
+            // 先關閉預覽以避免 Cap 設備衝突
+            previewFeedImg.src = '';
+
+            try {
+                const res = await fetch('/api/capture_dataset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        camera_source: camSource,
+                        samples: samples,
+                        interval: interval,
+                        clear_old: false
+                    })
+                });
+                const data = await res.json();
+                alert(data.message || "採集完成！");
+                camModal.style.display = 'none';
+                await fetchImages();
+            } catch(e) {
+                alert("連線拍照失敗，請確認鏡頭網址或連線。");
+                updatePreviewFeed();
+            } finally {
+                btnStartCaptureFromCam.disabled = false;
+                btnStartCaptureFromCam.innerHTML = '<i class="fa-solid fa-camera"></i> 依此鏡頭開始拍攝採集';
+            }
+        });
+
+        // --- AI 模型測試 Modal 邏輯 ---
+        const testModelModal = document.getElementById('testModelModal');
+        const btnOpenTestModal = document.getElementById('btnOpenTestModal');
+        const btnCloseTestModal = document.getElementById('btnCloseTestModal');
+        const tabPhotoTest = document.getElementById('tabPhotoTest');
+        const tabLiveTest = document.getElementById('tabLiveTest');
+        const photoTestView = document.getElementById('photoTestView');
+        const liveTestView = document.getElementById('liveTestView');
+        const testResultImg = document.getElementById('testResultImg');
+        const liveTestFeedImg = document.getElementById('liveTestFeedImg');
+        const lblTestImageTitle = document.getElementById('lblTestImageTitle');
+        const lblDetectionsSummary = document.getElementById('lblDetectionsSummary');
+        const lblModelWeightsInfo = document.getElementById('lblModelWeightsInfo');
+        let testImageIndex = 0;
+
+        btnOpenTestModal.addEventListener('click', () => {
+            testModelModal.style.display = 'flex';
+            testImageIndex = currentIndex;
+            switchTestTab('photo');
+        });
+
+        btnCloseTestModal.addEventListener('click', () => {
+            testModelModal.style.display = 'none';
+            liveTestFeedImg.src = ''; // 停止即時 AI 測試串流
+        });
+
+        function switchTestTab(tab) {
+            if (tab === 'photo') {
+                tabPhotoTest.style.borderColor = 'var(--accent-cyan)';
+                tabPhotoTest.style.color = 'var(--accent-cyan)';
+                tabLiveTest.style.borderColor = 'var(--card-border)';
+                tabLiveTest.style.color = 'var(--text-main)';
+                photoTestView.style.display = 'flex';
+                liveTestView.style.display = 'none';
+                liveTestFeedImg.src = '';
+                runPhotoModelTest(testImageIndex);
+            } else {
+                tabLiveTest.style.borderColor = 'var(--accent-cyan)';
+                tabLiveTest.style.color = 'var(--accent-cyan)';
+                tabPhotoTest.style.borderColor = 'var(--card-border)';
+                tabPhotoTest.style.color = 'var(--text-main)';
+                liveTestView.style.display = 'flex';
+                photoTestView.style.display = 'none';
+                const camSrc = getActiveCamSource();
+                liveTestFeedImg.src = `/test_video_feed?source=${encodeURIComponent(camSrc)}&t=${Date.now()}`;
+            }
+        }
+
+        tabPhotoTest.addEventListener('click', () => switchTestTab('photo'));
+        tabLiveTest.addEventListener('click', () => switchTestTab('live'));
+
+        async function runPhotoModelTest(idx) {
+            if (imagesData.length === 0) return;
+            if (idx < 0) idx = 0;
+            if (idx >= imagesData.length) idx = imagesData.length - 1;
+            testImageIndex = idx;
+
+            const imgName = imagesData[idx].name;
+            lblTestImageTitle.innerText = `影像: ${imgName} (${idx + 1}/${imagesData.length})`;
+            lblDetectionsSummary.innerText = "⏳ AI 模型推論中...";
+
+            try {
+                const res = await fetch('/api/test_image_model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_name: imgName })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    testResultImg.src = data.image_data;
+                    lblModelWeightsInfo.innerText = `🎯 載入模型: ${data.model_used}`;
+
+                    if (data.detections.length === 0) {
+                        lblDetectionsSummary.innerHTML = '<span style="color: var(--warning);">⚠️ AI 未在此影像上偵測到魚隻（或 Confidence 低於 25%）</span>';
+                    } else {
+                        const summaryText = data.detections.map(d => {
+                            const nameStr = d.class_id === 0 ? '🐠 三色神仙' : '🐟 黑神仙';
+                            return `${nameStr} (${d.confidence}%)`;
+                        }).join(' | ');
+                        lblDetectionsSummary.innerHTML = `✅ 成功辨識出 ${data.detections.length} 個目標: ${summaryText}`;
+                    }
+                } else {
+                    lblDetectionsSummary.innerText = `❌ 測試失敗: ${data.message}`;
+                }
+            } catch(e) {
+                lblDetectionsSummary.innerText = "❌ 請求失敗，請確認標註服務是否運作。";
+            }
+        }
+
+        document.getElementById('btnTestPrev').addEventListener('click', () => {
+            if (testImageIndex > 0) runPhotoModelTest(testImageIndex - 1);
+        });
+
+        document.getElementById('btnTestNext').addEventListener('click', () => {
+            if (testImageIndex < imagesData.length - 1) runPhotoModelTest(testImageIndex + 1);
+        });
+
+        fetchImages();
+    </script>
+</body>
+</html>

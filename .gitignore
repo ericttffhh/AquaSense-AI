@@ -1,0 +1,30 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+*.py[cod]
+*$py.class
+__pycache__/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# YOLO & PyTorch weights / local runs
+runs/detect/train*
+runs/detect/val*
+runs/detect/test*
+*.mp4
+*.avi
+*.webm
+
+# Keep essential default weights if needed, or ignore large downloaded base models
+yolov8m.pt
+yolov8s.pt
+yolo26n.pt
+
+# IDE
+.vscode/
+.idea/
+.agents/
