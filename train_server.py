@@ -59,7 +59,8 @@ def run_training_job():
     training_status["running"] = True
     training_status["completed"] = False
     training_status["error"] = None
-    training_status["log"] = "🚀 [Windows RTX] 正在啟動 YOLOv8 CUDA 深度學習加速微調..."
+    training_status["progress"] = 0
+    training_status["log"] = "🚀 [Windows RTX 3060] 正在啟動 YOLOv8 CUDA 深度學習加速微調..."
 
     try:
         from ultralytics import YOLO
@@ -67,28 +68,51 @@ def run_training_job():
         yaml_path = os.path.join(BASE_DIR, "dataset", "data.yaml")
         base_weights = BEST_WEIGHTS if os.path.exists(BEST_WEIGHTS) else "yolov8n.pt"
         
-        device_choice = 0 if torch.cuda.is_available() else 'cpu'
-        gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU"
+        cuda_ok = torch.cuda.is_available()
+        device_choice = 0 if cuda_ok else 'cpu'
+        gpu_name = torch.cuda.get_device_name(0) if cuda_ok else "CPU"
         
-        training_status["log"] = f"⚡ 使用硬體: {gpu_name} (Device {device_choice}) | 基底權重: {os.path.basename(base_weights)}"
+        init_msg = f"⚡ 使用硬體: {gpu_name} (CUDA: {cuda_ok}) | 基底權重: {os.path.basename(base_weights)}"
+        print(f"\n======================================================\n{init_msg}\n======================================================")
+        training_status["log"] = init_msg
         
         model = YOLO(base_weights)
+
+        # 註冊 YOLOv8 即時進度回呼函數 (即時更新至終端機與 Mac 端)
+        def on_fit_epoch_end(trainer):
+            epoch = trainer.epoch + 1
+            total_epochs = trainer.epochs
+            pct = int((epoch / total_epochs) * 100)
+            
+            loss_box = float(trainer.loss_items[0]) if len(trainer.loss_items) > 0 else 0.0
+            loss_cls = float(trainer.loss_items[1]) if len(trainer.loss_items) > 1 else 0.0
+            
+            progress_msg = f"⚡ [RTX 3060 訓練中] Epoch [{epoch:02d}/{total_epochs:02d}] ({pct}%) | Box Loss: {loss_box:.3f} | Cls Loss: {loss_cls:.3f}"
+            print(progress_msg)
+            training_status["log"] = progress_msg
+            training_status["progress"] = pct
+
+        model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
+
         results = model.train(
             data=yaml_path,
             epochs=35,
             imgsz=640,
-            batch=16 if torch.cuda.is_available() else 8,
+            batch=16 if cuda_ok else 8,
             device=device_choice,
             name='custom_angelfish_model',
             exist_ok=True,
-            verbose=True
+            verbose=False
         )
 
+        training_status["progress"] = 100
         training_status["log"] = "🎉 [Windows RTX 3060] 模型強化微調完成！準備回傳 Mac..."
         training_status["completed"] = True
+        print("\n======================================================\n🎉 訓練完成！已產出最新最優權重 best.pt\n======================================================")
     except Exception as e:
         training_status["error"] = str(e)
         training_status["log"] = f"❌ 訓練過程出錯: {str(e)}"
+        print(f"❌ 訓練出錯: {e}")
     finally:
         training_status["running"] = False
 

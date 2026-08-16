@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title AquaSense AI - Windows GPU Training Server
+title AquaSense AI - Windows GPU Training Server (RTX 3060 CUDA)
 
 echo ===================================================================
-echo   AquaSense AI - Windows RTX 3060 Wireless Training Server
+echo   🚀 AquaSense AI — Windows RTX 3060 CUDA 訓練節點服務
 echo ===================================================================
 echo.
 
@@ -14,26 +14,33 @@ if exist ".venv\Scripts\python.exe" (
     set PY_EXE=venv\Scripts\python.exe
 )
 
-echo Using Python: %PY_EXE%
+echo [1/3] 使用 Python 直譯器: %PY_EXE%
 
-echo Checking AI dependencies (ultralytics, torch, flask)...
-%PY_EXE% -c "import ultralytics, torch, flask" 2>nul
+echo [2/3] 正在檢測 PyTorch CUDA (RTX 3060 12G) GPU 加速支援...
+%PY_EXE% -c "import torch; assert torch.cuda.is_available(); print('✅ CUDA 支援正常: ' + torch.cuda.get_device_name(0))" 2>nul
 if %errorlevel% neq 0 (
     echo.
-    echo [INFO] Missing required packages. Installing ultralytics and dependencies...
-    %PY_EXE% -m pip install --upgrade pip
-    %PY_EXE% -m pip install -r requirements.txt
+    echo ⚠️ 偵測到目前 Python 尚未安裝 CUDA 版本的 PyTorch (目前為 CPU 模式)。
+    echo ⚡ 正在為您的 NVIDIA RTX 3060 自動安裝 CUDA 12.1 版 PyTorch + torchvision...
+    echo.
+    %PY_EXE% -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+    %PY_EXE% -m pip install ultralytics flask requests pyyaml
+    echo.
+    echo ✅ CUDA 套件安裝完成！
+) else (
+    echo ✅ NVIDIA GPU CUDA 環境就緒！
 )
 
 echo.
-echo Starting GPU Training Server on Port 5002...
+echo [3/3] 正在啟動 Windows 訓練節點服務 (Port 5002)...
+echo 👉 終端機會即時回傳每輪 Epoch 訓練進度與損失值！
+echo.
 %PY_EXE% train_server.py
 
 if %errorlevel% neq 0 (
     echo.
     echo ===================================================================
-    echo [ERROR] Failed to start training server.
-    echo Please make sure dependencies are installed by running: setup.bat
+    echo ❌ 伺服器啟動失敗，請確認 Port 5002 未被佔用。
     echo ===================================================================
 )
 
