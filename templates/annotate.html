@@ -967,10 +967,12 @@
                     lblModelWeightsInfo.innerText = `🎯 載入模型: ${data.model_used}`;
 
                     if (data.detections.length === 0) {
-                        lblDetectionsSummary.innerHTML = '<span style="color: var(--warning);">⚠️ AI 未在此影像上偵測到魚隻（或 Confidence 低於 25%）</span>';
+                        lblDetectionsSummary.innerHTML = '<span style="color: var(--warning);">⚠️ AI 未在此影像上偵測到魚隻（可微調上方置信度滑桿）</span>';
                     } else {
                         const summaryText = data.detections.map(d => {
-                            const nameStr = d.class_id === 0 ? '🐠 三色神仙' : '🐟 黑神仙';
+                            let nameStr = '🐠 三色神仙';
+                            if (d.class_id === 1) nameStr = '🐟 大理石神仙';
+                            else if (d.class_id === 2) nameStr = '✨ 銀泰坦神仙';
                             return `${nameStr} (${d.confidence}%)`;
                         }).join(' | ');
                         lblDetectionsSummary.innerHTML = `✅ 成功辨識出 ${data.detections.length} 個目標: ${summaryText}`;
