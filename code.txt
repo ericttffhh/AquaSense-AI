@@ -2,8 +2,11 @@
 主監測系統：.venv/bin/python app.py
 資料標註系統：.venv/bin/python annotate.py
 模型訓練程式：.venv/bin/python train_custom_model.py
+一鍵同步 Windows 成果：./update_from_windows.sh (或 git pull)
 
-【Windows 啟動指令】
+【Windows 啟動指令 (RTX 3060 訓練主力)】
 主監測系統：.venv\Scripts\python.exe app.py
 資料標註系統：.venv\Scripts\python.exe annotate.py
 模型訓練程式：.venv\Scripts\python.exe train_custom_model.py
+一鍵同步成果至 Mac：雙擊執行 sync_to_mac.bat
+一鍵離線打包給 Mac：雙擊執行 export_to_mac.bat
