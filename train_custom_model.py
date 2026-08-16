@@ -19,13 +19,18 @@ else:
     print("🚀 尚未有既有權重，載入 YOLOv8n 預訓練基底進行 Transfer Learning...")
     model = YOLO('yolov8n.pt')
 
+import torch
+
+device_choice = 0 if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+print(f"⚡ 訓練運算裝置加速: {device_choice}")
+
 # 開始接續微調訓練 (35 Epochs)
 results = model.train(
     data=yaml_path,
     epochs=35,
     imgsz=640,
-    batch=16,
-    device=0,  # 使用 RTX 3060 12GB (GPU 0) 進行硬體加速
+    batch=16 if torch.cuda.is_available() else 8,
+    device=device_choice,
     name='custom_angelfish_model',
     exist_ok=True
 )

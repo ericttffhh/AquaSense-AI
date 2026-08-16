@@ -476,33 +476,9 @@
                 </div>
             </div>
 
-            <!-- 雙魚獨立個體健康檔案卡 (含毫米體長估算) -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
-                <div class="card" style="padding: 12px; border-left: 4px solid var(--accent-cyan);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600; font-size: 0.95rem;">🐠 神仙魚 #1 (三色神仙)</span>
-                        <span id="p1Score" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,230,118,0.2); color: var(--success);">98分 · 健康</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 8px; font-size: 0.8rem; color: var(--text-sub);">
-                        <div>體長: <b id="p1Len" style="color: var(--accent-cyan);">68.5 mm</b></div>
-                        <div>里程: <b id="p1Dist" style="color: var(--text-main);">0.0 m</b></div>
-                        <div>均速: <b id="p1Spd" style="color: var(--text-main);">0.0 px/s</b></div>
-                        <div>水層: <b id="p1Layer" style="color: var(--text-main);">中層</b></div>
-                    </div>
-                </div>
-
-                <div class="card" style="padding: 12px; border-left: 4px solid #ab47bc;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: 600; font-size: 0.95rem;">🐟 神仙魚 #2 (黑神仙)</span>
-                        <span id="p2Score" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,230,118,0.2); color: var(--success);">97分 · 健康</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-top: 8px; font-size: 0.8rem; color: var(--text-sub);">
-                        <div>體長: <b id="p2Len" style="color: var(--accent-cyan);">72.0 mm</b></div>
-                        <div>里程: <b id="p2Dist" style="color: var(--text-main);">0.0 m</b></div>
-                        <div>均速: <b id="p2Spd" style="color: var(--text-main);">0.0 px/s</b></div>
-                        <div>水層: <b id="p2Layer" style="color: var(--text-main);">中層</b></div>
-                    </div>
-                </div>
+            <!-- 4 隻神仙魚獨立個體健康檔案卡 (含毫米體長估算) -->
+            <div id="fishProfilesContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px;">
+                <!-- 由 JavaScript 即時動態生成 4 隻魚個體檔案卡 -->
             </div>
 
             <!-- 歷史生態趨勢圖表 -->
@@ -790,22 +766,30 @@
                     document.getElementById('barHunger').style.width = `${data.hunger_index}%`;
                 }
 
-                // 雙魚個別檔案卡更新
-                if (data.fish_profiles && data.fish_profiles.length >= 2) {
-                    const p1 = data.fish_profiles[0];
-                    const p2 = data.fish_profiles[1];
+                // 多魚個體檔案卡動態更新 (支援三色、黑神仙與新入缸銀泰坦 A/B)
+                if (data.fish_profiles && data.fish_profiles.length > 0) {
+                    const container = document.getElementById('fishProfilesContainer');
+                    container.innerHTML = data.fish_profiles.map((p, idx) => {
+                        let borderCol = '#00e676';
+                        let icon = '🐠';
+                        if (p.name.includes('黑神仙')) { borderCol = '#d500f9'; icon = '🐟'; }
+                        else if (p.name.includes('銀泰坦')) { borderCol = '#00e5ff'; icon = '✨'; }
 
-                    document.getElementById('p1Len').innerText = `${p1.length_mm || 68.5} mm`;
-                    document.getElementById('p1Dist').innerText = `${p1.dist_m} m`;
-                    document.getElementById('p1Spd').innerText = `${p1.avg_spd} px/s`;
-                    document.getElementById('p1Layer').innerText = p1.fav_layer.split(' ')[0];
-                    document.getElementById('p1Score').innerText = `${p1.health_score}分 · 正常`;
-
-                    document.getElementById('p2Len').innerText = `${p2.length_mm || 72.0} mm`;
-                    document.getElementById('p2Dist').innerText = `${p2.dist_m} m`;
-                    document.getElementById('p2Spd').innerText = `${p2.avg_spd} px/s`;
-                    document.getElementById('p2Layer').innerText = p2.fav_layer.split(' ')[0];
-                    document.getElementById('p2Score').innerText = `${p2.health_score}分 · 正常`;
+                        return `
+                        <div class="card" style="padding: 10px; border-left: 4px solid ${borderCol}; background: rgba(15, 23, 42, 0.65);">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600; font-size: 0.88rem; color: ${borderCol};">${icon} ${p.name}</span>
+                                <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,230,118,0.2); color: var(--success);">${p.health_score}分 · 正常</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; margin-top: 6px; font-size: 0.75rem; color: var(--text-sub);">
+                                <div>體長: <b style="color: var(--accent-cyan);">${p.length_mm || 65.0}mm</b></div>
+                                <div>里程: <b style="color: var(--text-main);">${p.dist_m}m</b></div>
+                                <div>均速: <b style="color: var(--text-main);">${p.avg_spd}px/s</b></div>
+                                <div>水層: <b style="color: var(--text-main);">${(p.fav_layer || '中層').split(' ')[0]}</b></div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
                 }
 
                 // 臨床病理前哨矩陣更新

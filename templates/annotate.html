@@ -268,12 +268,15 @@
         <!-- 右側：當前標註框與訓練狀態 -->
         <div class="panel">
             <div style="font-weight: 600; font-size: 1rem;">當前標註類別選擇</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <button type="button" id="btnClass0" class="btn" style="background: rgba(0, 230, 118, 0.2); border: 2px solid #00e676; color: #00e676; font-size: 0.8rem; padding: 6px 8px; justify-content: center;">
-                    🐠 三色神仙 (1)
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                <button type="button" id="btnClass0" class="btn" style="background: rgba(0, 230, 118, 0.2); border: 2px solid #00e676; color: #00e676; font-size: 0.75rem; padding: 6px 4px; justify-content: center;">
+                    🐠 三色 (1)
                 </button>
-                <button type="button" id="btnClass1" class="btn" style="background: rgba(213, 0, 249, 0.1); border: 1px solid rgba(213, 0, 249, 0.4); color: #e040fb; font-size: 0.8rem; padding: 6px 8px; justify-content: center;">
+                <button type="button" id="btnClass1" class="btn" style="background: rgba(213, 0, 249, 0.1); border: 1px solid rgba(213, 0, 249, 0.4); color: #e040fb; font-size: 0.75rem; padding: 6px 4px; justify-content: center;">
                     🐟 黑神仙 (2)
+                </button>
+                <button type="button" id="btnClass2" class="btn" style="background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.4); color: #00e5ff; font-size: 0.75rem; padding: 6px 4px; justify-content: center;">
+                    ✨ 銀泰坦 (3)
                 </button>
             </div>
 
@@ -423,7 +426,7 @@
         let imagesData = [];
         let currentIndex = 0;
         let currentBoxes = []; // [{cls, cx, cy, w, h}] normalized (0~1)
-        let currentClass = 0; // 0: 三色神仙, 1: 黑神仙
+        let currentClass = 0; // 0: 三色神仙, 1: 黑神仙, 2: 銀泰坦
         let isDrawing = false;
         let startX = 0, startY = 0;
 
@@ -433,23 +436,22 @@
 
         const btnC0 = document.getElementById('btnClass0');
         const btnC1 = document.getElementById('btnClass1');
+        const btnC2 = document.getElementById('btnClass2');
 
         function selectClass(c) {
             currentClass = c;
-            if (c === 0) {
-                btnC0.style.border = '2px solid #00e676';
-                btnC0.style.background = 'rgba(0, 230, 118, 0.2)';
-                btnC1.style.border = '1px solid rgba(213, 0, 249, 0.4)';
-                btnC1.style.background = 'rgba(213, 0, 249, 0.1)';
-            } else {
-                btnC1.style.border = '2px solid #e040fb';
-                btnC1.style.background = 'rgba(213, 0, 249, 0.25)';
-                btnC0.style.border = '1px solid rgba(0, 230, 118, 0.4)';
-                btnC0.style.background = 'rgba(0, 230, 118, 0.1)';
-            }
+            btnC0.style.border = (c === 0) ? '2px solid #00e676' : '1px solid rgba(0, 230, 118, 0.4)';
+            btnC0.style.background = (c === 0) ? 'rgba(0, 230, 118, 0.25)' : 'rgba(0, 230, 118, 0.1)';
+            
+            btnC1.style.border = (c === 1) ? '2px solid #e040fb' : '1px solid rgba(213, 0, 249, 0.4)';
+            btnC1.style.background = (c === 1) ? 'rgba(213, 0, 249, 0.25)' : 'rgba(213, 0, 249, 0.1)';
+
+            btnC2.style.border = (c === 2) ? '2px solid #00e5ff' : '1px solid rgba(0, 229, 255, 0.4)';
+            btnC2.style.background = (c === 2) ? 'rgba(0, 229, 255, 0.25)' : 'rgba(0, 229, 255, 0.1)';
         }
         btnC0.onclick = () => selectClass(0);
         btnC1.onclick = () => selectClass(1);
+        btnC2.onclick = () => selectClass(2);
 
         // 載入影像清單
         async function fetchImages() {
@@ -505,17 +507,27 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(currentImageObj, 0, 0, canvas.width, canvas.height);
 
-            // 繪製已有方框 (區分三色神仙 vs 黑神仙)
+            // 繪製已有方框 (三色神仙 vs 黑神仙 vs 銀泰坦神仙)
             currentBoxes.forEach((b, i) => {
                 const x = (b.cx - b.w / 2) * canvas.width;
                 const y = (b.cy - b.h / 2) * canvas.height;
                 const w = b.w * canvas.width;
                 const h = b.h * canvas.height;
 
-                const isKoi = (b.cls === 0);
-                const strokeCol = isKoi ? '#00e676' : '#e040fb';
-                const fillCol = isKoi ? 'rgba(0, 230, 118, 0.2)' : 'rgba(224, 64, 251, 0.2)';
-                const labelText = isKoi ? '🐠 三色神仙' : '🐟 黑神仙';
+                let strokeCol, fillCol, labelText;
+                if (b.cls === 0) {
+                    strokeCol = '#00e676';
+                    fillCol = 'rgba(0, 230, 118, 0.2)';
+                    labelText = '🐠 三色神仙';
+                } else if (b.cls === 1) {
+                    strokeCol = '#e040fb';
+                    fillCol = 'rgba(224, 64, 251, 0.2)';
+                    labelText = '🐟 黑神仙';
+                } else {
+                    strokeCol = '#00e5ff';
+                    fillCol = 'rgba(0, 229, 255, 0.2)';
+                    labelText = '✨ 銀泰坦神仙';
+                }
 
                 ctx.strokeStyle = strokeCol;
                 ctx.lineWidth = 2;
@@ -531,11 +543,21 @@
 
             // 繪製正在拖曳的暫時方框
             if (tempBox) {
-                const isKoi = (currentClass === 0);
-                ctx.strokeStyle = isKoi ? '#00e676' : '#e040fb';
+                let strokeCol, fillCol;
+                if (currentClass === 0) {
+                    strokeCol = '#00e676';
+                    fillCol = 'rgba(0, 230, 118, 0.25)';
+                } else if (currentClass === 1) {
+                    strokeCol = '#e040fb';
+                    fillCol = 'rgba(224, 64, 251, 0.25)';
+                } else {
+                    strokeCol = '#00e5ff';
+                    fillCol = 'rgba(0, 229, 255, 0.25)';
+                }
+                ctx.strokeStyle = strokeCol;
                 ctx.lineWidth = 2;
                 ctx.strokeRect(tempBox.x, tempBox.y, tempBox.w, tempBox.h);
-                ctx.fillStyle = isKoi ? 'rgba(0, 230, 118, 0.25)' : 'rgba(224, 64, 251, 0.25)';
+                ctx.fillStyle = fillCol;
                 ctx.fillRect(tempBox.x, tempBox.y, tempBox.w, tempBox.h);
             }
         }
@@ -547,9 +569,17 @@
                 return;
             }
             listEl.innerHTML = currentBoxes.map((b, i) => {
-                const isKoi = (b.cls === 0);
-                const tagColor = isKoi ? '#00e676' : '#e040fb';
-                const tagText = isKoi ? '🐠 三色神仙' : '🐟 黑神仙';
+                let tagColor, tagText;
+                if (b.cls === 0) {
+                    tagColor = '#00e676';
+                    tagText = '🐠 三色神仙';
+                } else if (b.cls === 1) {
+                    tagColor = '#e040fb';
+                    tagText = '🐟 黑神仙';
+                } else {
+                    tagColor = '#00e5ff';
+                    tagText = '✨ 銀泰坦神仙';
+                }
                 return `
                 <div class="box-item" style="border-left-color: ${tagColor};">
                     <span style="color: ${tagColor}; font-weight:600;">${tagText} #${i + 1}</span>

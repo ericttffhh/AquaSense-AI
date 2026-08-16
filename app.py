@@ -242,10 +242,12 @@ class CameraStreamManager:
         self.show_heatmap = False
         self.heatmap_grid = np.zeros((480, 640), dtype=np.float32)
 
-        # 雙魚個別身分檔案庫 (Individual Biometric Profiles - 含體長毫米估算)
+        # 4 隻神仙魚個體身分檔案庫 (Individual Biometric Profiles - 支援三色、黑神仙與新入缸銀泰坦)
         self.fish_profiles = {
             1: {"id": 1, "name": "三色神仙魚", "type": "三色斑紋", "length_mm": 68.5, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 98, "top_pct": 10, "mid_pct": 75, "bot_pct": 15},
-            2: {"id": 2, "name": "黑神仙魚", "type": "深黑墨紋", "length_mm": 72.0, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 97, "top_pct": 15, "mid_pct": 70, "bot_pct": 15}
+            2: {"id": 2, "name": "黑神仙魚", "type": "深黑墨紋", "length_mm": 72.0, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 97, "top_pct": 15, "mid_pct": 70, "bot_pct": 15},
+            3: {"id": 3, "name": "銀泰坦神仙 (A)", "type": "金屬亮銀", "length_mm": 65.0, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 99, "top_pct": 12, "mid_pct": 78, "bot_pct": 10},
+            4: {"id": 4, "name": "銀泰坦神仙 (B)", "type": "金屬亮銀", "length_mm": 64.2, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 99, "top_pct": 10, "mid_pct": 80, "bot_pct": 10}
         }
 
         # 飢餓度與晝夜節律
@@ -266,7 +268,7 @@ class CameraStreamManager:
             "vitality": 95,      # 游動活力
             "posture": 98,       # 姿態平衡
             "clarity": 95,       # 水質透光
-            "social": 90,        # 雙魚社交
+            "social": 92,        # 多魚社交群游
             "nutrition": 88      # 索餌進食
         }
 
@@ -278,7 +280,7 @@ class CameraStreamManager:
             "current_clarity": 95.0,
             "current_activity": 6.5,
             "current_brightness": 120.0,
-            "current_fish_count": 2,
+            "current_fish_count": 4,
             "abnormal_posture_count": 0,
             "critical_count": 0,
             "is_green": False,
@@ -296,11 +298,13 @@ class CameraStreamManager:
             "health_report_10min": {}
         }
 
-        # 3D Demo 擬真動態神仙魚模擬狀態
+        # 3D Demo 擬真動態 4 隻神仙魚群游生態模擬狀態
         self.demo_ticks = 0
         self.demo_fish_list = [
             {"x": 140, "y": 200, "vx": 3, "vy": 1, "size": 42, "color": (50, 150, 245)},
-            {"x": 400, "y": 280, "vx": -3, "vy": -1, "size": 46, "color": (20, 20, 20)}
+            {"x": 400, "y": 280, "vx": -3, "vy": -1, "size": 46, "color": (20, 20, 20)},
+            {"x": 250, "y": 180, "vx": 2.2, "vy": -1.2, "size": 40, "color": (235, 235, 235)},
+            {"x": 320, "y": 320, "vx": -2.5, "vy": 1.4, "size": 39, "color": (210, 210, 210)}
         ]
 
         # 啟動獨立背景處理執行緒
@@ -560,23 +564,42 @@ class CameraStreamManager:
 
             x, y, w, h = tf.bbox
             is_abn = (tf.health_status == "abnormal")
-            box_col = (0, 50, 255) if is_abn else (0, 230, 118)
             status_text = "Abnormal" if is_abn else "Normal"
             
-            # 依據神經網路預測類別 (優先) 或 真實色彩指紋定名：
+            # 依據神經網路預測類別 (優先) 或 真實色彩/光譜特徵指紋定名：
             model_cls = getattr(tf, 'cls_id', None)
-            if model_cls is not None and model_cls in [0, 1]:
-                is_koi = (model_cls == 0)
+            if model_cls == 0:
+                fish_name = "三色神仙"
+                box_col = (0, 230, 118) # 亮綠 (BGR)
+                prof_id = 1
+            elif model_cls == 1:
+                fish_name = "黑神仙"
+                box_col = (251, 64, 224) # 亮紫 (BGR)
+                prof_id = 2
+            elif model_cls == 2:
+                sub_titan = "A" if (tf.id % 2 == 1) else "B"
+                fish_name = f"銀泰坦 ({sub_titan})"
+                box_col = (255, 229, 0) # 亮冰藍 / 金屬銀 (BGR)
+                prof_id = 3 if sub_titan == "A" else 4
             else:
-                # 備援策略：亮色白底/橘斑為三色神仙，深黑體色為黑神仙
+                # 備援光譜指紋 (當模型尚未重新微調完成時)：
                 b_val = fish_brightness_list[idx]
-                if len(confirmed_fish) >= 2:
-                    is_koi = (b_val >= np.mean(fish_brightness_list))
+                if b_val < 75.0:
+                    fish_name = "黑神仙"
+                    box_col = (251, 64, 224)
+                    prof_id = 2
+                elif b_val > 140.0:
+                    sub_titan = "A" if (tf.id % 2 == 1) else "B"
+                    fish_name = f"銀泰坦 ({sub_titan})"
+                    box_col = (255, 229, 0)
+                    prof_id = 3 if sub_titan == "A" else 4
                 else:
-                    is_koi = (b_val >= 90.0)
+                    fish_name = "三色神仙"
+                    box_col = (0, 230, 118)
+                    prof_id = 1
 
-            fish_name = "三色神仙" if is_koi else "黑神仙"
-            prof_id = 1 if is_koi else 2
+            if is_abn:
+                box_col = (0, 50, 255) # 異常時呈現醒目紅框
 
             # HUD 資訊：名稱、健康狀態、瞬時速度、水層
             label_main = f"{fish_name} #{tf.id} [{status_text}]"

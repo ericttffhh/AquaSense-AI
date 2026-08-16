@@ -14,15 +14,16 @@ LABEL_DIR = "dataset/labels/train"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(LABEL_DIR, exist_ok=True)
 
-# 建立 YOLO 雙物體類別資料集設定檔 (三色神仙 vs 黑神仙 獨立類別訓練)
+# 建立 YOLO 3大品種資料集設定檔 (三色神仙 vs 黑神仙 vs 銀泰坦神仙)
 DATASET_YAML = "dataset/data.yaml"
 data_config = {
     'path': os.path.abspath('dataset'),
     'train': 'images/train',
     'val': 'images/train',
     'names': {
-        0: 'koi_angelfish',    # 三色神仙魚 (花色/橙頂白底)
-        1: 'black_angelfish'   # 黑神仙魚 (深黑墨紋)
+        0: 'koi_angelfish',            # 🐠 三色神仙魚 (花色/橙頂白底)
+        1: 'black_angelfish',          # 🐟 黑神仙魚 (深黑墨紋)
+        2: 'silver_titan_angelfish'    # ✨ 銀泰坦神仙魚 (銀白金屬光澤)
     }
 }
 with open(DATASET_YAML, 'w') as f:
@@ -310,10 +311,15 @@ def test_image_model():
             conf = float(box.conf[0].item())
             xyxy = box.xyxy[0].tolist() # [x1, y1, x2, y2]
             
-            # 繪製邊界框與標籤 (0: 三色神仙 (綠色), 1: 黑神仙 (紫色))
-            is_koi = (cls_id == 0)
-            color = (118, 230, 0) if is_koi else (251, 64, 224) # BGR
-            label_str = f"{'koi_angelfish' if is_koi else 'black_angelfish'} {conf*100:.1f}%"
+            # 繪製邊界框與標籤 (0: 三色神仙, 1: 黑神仙, 2: 銀泰坦神仙)
+            if cls_id == 0:
+                c_name, color = "koi_angelfish (三色)", (118, 230, 0) # 亮綠
+            elif cls_id == 1:
+                c_name, color = "black_angelfish (黑神仙)", (251, 64, 224) # 亮紫
+            else:
+                c_name, color = "silver_titan (銀泰坦)", (255, 229, 0) # 亮冰藍/金屬銀 (BGR)
+            
+            label_str = f"{c_name} {conf*100:.1f}%"
             
             x1, y1, x2, y2 = map(int, xyxy)
             cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
@@ -321,7 +327,7 @@ def test_image_model():
             
             detections.append({
                 'class_id': cls_id,
-                'class_name': 'koi_angelfish' if is_koi else 'black_angelfish',
+                'class_name': c_name,
                 'confidence': round(conf * 100, 1),
                 'box': [x1, y1, x2, y2]
             })
@@ -368,9 +374,15 @@ def generate_test_stream_frames(source_str):
                         cls_id = int(box.cls[0].item())
                         conf = float(box.conf[0].item())
                         xyxy = box.xyxy[0].tolist()
-                        is_koi = (cls_id == 0)
-                        color = (118, 230, 0) if is_koi else (251, 64, 224)
-                        label_str = f"{'koi_angelfish' if is_koi else 'black_angelfish'} {conf*100:.0f}%"
+                        
+                        if cls_id == 0:
+                            c_name, color = "koi_angelfish (三色)", (118, 230, 0)
+                        elif cls_id == 1:
+                            c_name, color = "black_angelfish (黑神仙)", (251, 64, 224)
+                        else:
+                            c_name, color = "silver_titan (銀泰坦)", (255, 229, 0)
+                            
+                        label_str = f"{c_name} {conf*100:.0f}%"
                         x1, y1, x2, y2 = map(int, xyxy)
                         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                         cv2.putText(frame, label_str, (x1, max(y1 - 6, 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
