@@ -59,20 +59,16 @@ def api_cameras():
             pass
 
     # 預設加入 DroidCam 及自訂 IP 鏡頭選項
-    client_ip = request.remote_addr
-    if client_ip and client_ip not in ['127.0.0.1', '192.168.0.120', '192.168.0.119']:
-        available_cams.append({
-            'id': f'http://{client_ip}:4747/video',
-            'name': f'📱 手機 DroidCam 鏡頭 ({client_ip})'
-        })
-    available_cams.append({
-        'id': 'http://192.168.0.119:4747/video',
-        'name': '📱 DroidCam IP 鏡頭 (192.168.0.119)'
-    })
     available_cams.append({
         'id': 'http://192.168.0.120:4747/video',
         'name': '📱 DroidCam IP 鏡頭 (192.168.0.120)'
     })
+    client_ip = request.remote_addr
+    if client_ip and client_ip not in ['127.0.0.1', '192.168.0.120']:
+        available_cams.append({
+            'id': f'http://{client_ip}:4747/video',
+            'name': f'📱 手機 DroidCam 鏡頭 ({client_ip})'
+        })
     return jsonify({'cameras': available_cams})
 
 def generate_preview_frames(source_str):
