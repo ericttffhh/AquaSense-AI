@@ -247,9 +247,9 @@ def save_label():
 
 training_status = {"running": False, "log": "尚未開始訓練", "target": "local"}
 
-def run_remote_windows_train(windows_url):
-    """跨機無線協同訓練：向 Windows RTX 3060 節點發送標註資料並執行訓練，完成後自動下載模型"""
-    global training_status
+def run_remote_windows_train(windows_url, model_size='s', epochs=100, imgsz=960):
+    """跨機無線協同訓練：向 Windows RTX 3060 節點發送標註資料並執行 100 輪 960px 深度訓練，完成後自動下載模型"""
+    global training_status, _cached_model, _cached_weights_path
     training_status["running"] = True
     training_status["log"] = f"📡 正在連線 Windows 訓練節點 ({windows_url})..."
 
@@ -265,9 +265,13 @@ def run_remote_windows_train(windows_url):
         training_status["log"] = f"📤 正在無線同步 {len(labels_dict)} 份標註資料至 Windows RTX 3060..."
         sync_res = requests.post(f"{windows_url}/api/sync_dataset", json={"labels": labels_dict}, timeout=15)
         
-        # 2. 觸發 Windows GPU 訓練
-        training_status["log"] = "⚡ 已通知 Windows 啟動 RTX 3060 (CUDA) 深度學習加速微調..."
-        start_res = requests.post(f"{windows_url}/api/start_train", timeout=10)
+        # 2. 觸發 Windows GPU 深度訓練
+        training_status["log"] = f"⚡ 已通知 Windows 啟動 RTX 3060 (CUDA) YOLOv8{model_size} 深度訓練 ({imgsz}px, {epochs}輪)..."
+        start_res = requests.post(f"{windows_url}/api/start_train", json={
+            "model_size": model_size,
+            "epochs": epochs,
+            "imgsz": imgsz
+        }, timeout=10)
 
         # 3. 輪詢進度直到完成
         while True:
@@ -288,7 +292,11 @@ def run_remote_windows_train(windows_url):
                         with open(dest_file, 'wb') as f:
                             for chunk in down_res.iter_content(chunk_size=8192):
                                 f.write(chunk)
-                        training_status["log"] = "🎉 [Windows RTX 3060] 極速訓練完成！最新最優 AI 權重已自動同步至 Mac 端！"
+                        
+                        with _model_lock:
+                            _cached_model = None # 清除舊快取，載入最新高階權重
+                        
+                        training_status["log"] = f"🎉 [Windows RTX 3060] 深度訓練完成！最新 YOLOv8{model_size} ({imgsz}px) AI 權重已同步至 Mac！"
                     else:
                         training_status["log"] = "⚠️ 模型已在 Windows 訓練完成，但自動下載遇到狀態碼錯誤。"
                     break
@@ -304,31 +312,34 @@ def run_remote_windows_train(windows_url):
     finally:
         training_status["running"] = False
 
-def run_train_thread():
-    global training_status
+def run_train_thread(model_size='s', epochs=100, imgsz=960):
+    global training_status, _cached_model
     training_status["running"] = True
     
     existing_weights = os.path.join(BASE_DIR, "runs", "detect", "custom_angelfish_model", "weights", "best.pt")
-    if os.path.exists(existing_weights):
-        training_status["log"] = f"🎯 載入既有模型 {existing_weights}，啟動接續強化微調 (Continual Fine-Tuning)..."
-        base_pt = existing_weights
-    else:
-        training_status["log"] = "🚀 載入 YOLOv8n 基底，啟動全新神經網路訓練..."
-        base_pt = 'yolov8n.pt'
+    target_base = f"yolov8{model_size}.pt"
+    base_pt = existing_weights if os.path.exists(existing_weights) else target_base
+    training_status["log"] = f"🚀 載入 {os.path.basename(base_pt)} 基底，啟動 {epochs} 輪深度微調 ({imgsz}px)..."
 
     try:
         from ultralytics import YOLO
         model = YOLO(base_pt)
         model.train(
             data=DATASET_YAML,
-            epochs=35,
-            imgsz=640,
-            batch=8,
+            epochs=epochs,
+            imgsz=imgsz,
+            batch=4,
             device='mps' if torch.backends.mps.is_available() else 'cpu',
             name='custom_angelfish_model',
+            fliplr=0.5,
+            mosaic=1.0,
+            mixup=0.15,
+            cos_lr=True,
             exist_ok=True
         )
-        training_status["log"] = "🎉 本機 Mac 專屬模型微調成功！權重已更新至 best.pt"
+        with _model_lock:
+            _cached_model = None
+        training_status["log"] = "🎉 本機專屬深度模型微調成功！權重已更新至 best.pt"
     except Exception as e:
         training_status["log"] = f"❌ 訓練失敗: {e}"
     finally:
@@ -341,8 +352,11 @@ def start_train():
         return jsonify({"status": "running", "message": "訓練已在進行中"}), 400
     
     data = request.json or {}
-    engine_type = data.get('engine', 'local') # 'local' 或 'windows'
+    engine_type = data.get('engine', 'windows') # 預設 Windows RTX 3060
     windows_ip = data.get('windows_ip', 'http://192.168.0.119:5002')
+    model_size = data.get('model_size', 's')
+    epochs = int(data.get('epochs', 100))
+    imgsz = int(data.get('imgsz', 960))
 
     if not windows_ip.startswith('http'):
         windows_ip = f"http://{windows_ip}"
@@ -351,13 +365,13 @@ def start_train():
 
     if engine_type == 'windows':
         training_status["target"] = "windows"
-        t = threading.Thread(target=run_remote_windows_train, args=(windows_ip,), daemon=True)
+        t = threading.Thread(target=run_remote_windows_train, args=(windows_ip, model_size, epochs, imgsz), daemon=True)
     else:
         training_status["target"] = "local"
-        t = threading.Thread(target=run_train_thread, daemon=True)
+        t = threading.Thread(target=run_train_thread, args=(model_size, epochs, imgsz), daemon=True)
     
     t.start()
-    return jsonify({"status": "started", "message": f"已啟動訓練任務 ({engine_type})"})
+    return jsonify({"status": "started", "message": f"已啟動深度學習訓練任務 (YOLOv8{model_size}, {imgsz}px, {epochs}輪)"})
 
 @app.route('/api/train_status')
 def get_train_status():

@@ -54,13 +54,13 @@ def sync_dataset():
         "message": f"成功同步 {len(labels)} 份標註標籤至 Windows 訓練節點"
     })
 
-def run_training_job():
+def run_train_thread(model_size='s', epochs=100, imgsz=960):
     global training_status
     training_status["running"] = True
-    training_status["completed"] = False
-    training_status["error"] = None
     training_status["progress"] = 0
-    training_status["log"] = "🚀 [Windows RTX 3060] 正在啟動 YOLOv8 CUDA 深度學習加速微調..."
+    training_status["error"] = None
+    training_status["completed"] = False
+    training_status["log"] = f"🚀 [RTX 3060] 初始化深度學習環境 (YOLOv8{model_size}, {imgsz}px, {epochs}輪)..."
 
     try:
         from ultralytics import YOLO
@@ -81,13 +81,14 @@ def run_training_job():
         with open(yaml_path, 'w', encoding='utf-8') as yf:
             yaml.dump(data_cfg, yf, sort_keys=False)
 
-        base_weights = BEST_WEIGHTS if os.path.exists(BEST_WEIGHTS) else "yolov8n.pt"
+        target_base = f"yolov8{model_size}.pt"
+        base_weights = BEST_WEIGHTS if os.path.exists(BEST_WEIGHTS) else target_base
         
         cuda_ok = torch.cuda.is_available()
         device_choice = 'cuda:0' if cuda_ok else 'cpu'
         gpu_name = torch.cuda.get_device_name(0) if cuda_ok else "CPU"
         
-        init_msg = f"⚡ 使用硬體: {gpu_name} (CUDA: {cuda_ok}) | 基底權重: {os.path.basename(base_weights)}"
+        init_msg = f"⚡ 使用硬體: {gpu_name} (CUDA: {cuda_ok}) | 基底模型: {os.path.basename(base_weights)} | 解析度: {imgsz}px | 輪數: {epochs}"
         print(f"\n======================================================\n{init_msg}\n======================================================")
         training_status["log"] = init_msg
         
@@ -114,7 +115,7 @@ def run_training_job():
                         except Exception: pass
                 
                 loss_str = (" | " + " | ".join(loss_info)) if loss_info else ""
-                progress_msg = f"⚡ [RTX 3060 訓練中] Epoch [{epoch:02d}/{total_epochs:02d}] ({pct}%){loss_str}"
+                progress_msg = f"⚡ [RTX 3060 深度訓練] Epoch [{epoch:03d}/{total_epochs:03d}] ({pct}%){loss_str}"
                 print(progress_msg)
                 training_status["log"] = progress_msg
                 training_status["progress"] = pct
@@ -125,22 +126,26 @@ def run_training_job():
 
         results = model.train(
             data=yaml_path,
-            epochs=50,
-            imgsz=640,
-            batch=16 if cuda_ok else 8,
+            epochs=epochs,
+            imgsz=imgsz,
+            batch=8 if cuda_ok else 4,
             device=device_choice,
             workers=0,  # Windows 線程中執行 DataLoader 必須設為 0 以防多行程 crash
             name='custom_angelfish_model',
             fliplr=0.5,
+            mosaic=1.0,
+            mixup=0.15,
+            cos_lr=True,
             hsv_h=0.015,
             hsv_s=0.7,
             hsv_v=0.4,
+            patience=35,
             exist_ok=True,
             verbose=False
         )
 
         training_status["progress"] = 100
-        training_status["log"] = "🎉 [Windows RTX 3060] 模型強化微調完成！準備回傳 Mac..."
+        training_status["log"] = "🎉 [Windows RTX 3060] 深度模型強化微調完成！最新權重已生成！"
         training_status["completed"] = True
         print("\n======================================================\n🎉 訓練完成！已產出最新最優權重 best.pt\n======================================================")
     except Exception as e:
@@ -148,19 +153,22 @@ def run_training_job():
         traceback.print_exc()
         err_detail = f"{type(e).__name__}: {str(e)}"
         training_status["error"] = err_detail
-        training_status["log"] = f"❌ 訓練過程出錯: {err_detail}"
-        print(f"❌ 訓練出錯: {err_detail}")
+        training_status["log"] = f"❌ 訓練失敗: {err_detail}"
     finally:
         training_status["running"] = False
 
 @app.route('/api/start_train', methods=['POST'])
 def start_train():
-    """由 Mac 端遠端一鍵觸發 Windows GPU 訓練"""
     global training_status
     if training_status["running"]:
-        return jsonify({"status": "error", "message": "訓練任務已在進行中"}), 400
-
-    t = threading.Thread(target=run_training_job, daemon=True)
+        return jsonify({"status": "running", "message": "訓練已在進行中"}), 400
+    
+    data = request.json or {}
+    model_size = data.get('model_size', 's')
+    epochs = int(data.get('epochs', 100))
+    imgsz = int(data.get('imgsz', 960))
+    
+    t = threading.Thread(target=run_train_thread, args=(model_size, epochs, imgsz), daemon=True)
     t.start()
     return jsonify({"status": "success", "message": "已成功在 Windows (RTX GPU) 上啟動訓練！"})
 

@@ -296,10 +296,39 @@
             </div>
             <div style="margin-top: 4px;">
                 <select id="trainEngineSelect" style="width: 100%; padding: 6px 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-main); font-size: 0.82rem;">
-                    <option value="windows">⚡ 遠端 Windows RTX 3060 (極速 GPU 30秒)</option>
+                    <option value="windows">⚡ 遠端 Windows RTX 3060 (極速 GPU 3~4分鐘)</option>
                     <option value="local">🖥️ 本機 Mac (MPS/CPU)</option>
                 </select>
             </div>
+
+            <!-- 深度學習模型規格與參數設定 -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-sub);">模型規格：</label>
+                    <select id="trainModelSizeSelect" style="width: 100%; padding: 4px 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 6px; color: var(--accent-cyan); font-size: 0.78rem;">
+                        <option value="s" selected>🚀 YOLOv8s (推薦平衡)</option>
+                        <option value="m">🏆 YOLOv8m (極致旗艦)</option>
+                        <option value="n">⚡ YOLOv8n (輕量極速)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-sub);">輸入解析度：</label>
+                    <select id="trainImgszSelect" style="width: 100%; padding: 4px 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 6px; color: var(--accent-cyan); font-size: 0.78rem;">
+                        <option value="960" selected>960px (高階精細)</option>
+                        <option value="640">640px (標準)</option>
+                        <option value="1280">1280px (超高解析)</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 6px;">
+                <label style="font-size: 0.75rem; color: var(--text-sub);">訓練輪數 (Epochs)：</label>
+                <select id="trainEpochsSelect" style="width: 100%; padding: 4px 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 6px; color: var(--accent-cyan); font-size: 0.78rem;">
+                    <option value="100" selected>100 輪 (深度學習最佳推薦)</option>
+                    <option value="50">50 輪 (標準收斂)</option>
+                    <option value="35">35 輪 (快速預覽)</option>
+                </select>
+            </div>
+
             <div id="windowsIpGroup" style="margin-top: 6px;">
                 <label style="font-size: 0.75rem; color: var(--text-sub);">Windows 訓練端 IP / 網址：</label>
                 <input type="text" id="txtWindowsIp" value="http://192.168.0.119:5002" style="width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 6px; color: var(--accent-cyan); font-size: 0.8rem;" placeholder="http://192.168.0.xxx:5002">
@@ -751,18 +780,27 @@
         btnStartTraining.addEventListener('click', async () => {
             const engine = trainEngineSelect.value;
             const windowsIp = document.getElementById('txtWindowsIp').value.trim();
+            const modelSize = document.getElementById('trainModelSizeSelect').value;
+            const imgsz = parseInt(document.getElementById('trainImgszSelect').value);
+            const epochs = parseInt(document.getElementById('trainEpochsSelect').value);
 
             btnStartTraining.disabled = true;
-            btnStartTraining.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 訓練進行中...';
+            btnStartTraining.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 深度訓練進行中...';
             trainLogBox.innerHTML = (engine === 'windows')
-                ? `⏳ 正在連線 Windows 訓練端 (${windowsIp}) 並同步標註資料集...`
-                : "⏳ 正在啟動本機 Mac YOLOv8 深度學習訓練...";
+                ? `⏳ 正在連線 Windows RTX 3060 (${windowsIp}) 並啟動 YOLOv8${modelSize} (${imgsz}px, ${epochs}輪)...`
+                : `⏳ 正在啟動本機 Mac YOLOv8${modelSize} 深度微調 (${imgsz}px, ${epochs}輪)...`;
 
             try {
                 const res = await fetch('/api/start_train', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ engine: engine, windows_ip: windowsIp })
+                    body: JSON.stringify({
+                        engine: engine,
+                        windows_ip: windowsIp,
+                        model_size: modelSize,
+                        imgsz: imgsz,
+                        epochs: epochs
+                    })
                 });
                 const data = await res.json();
                 if (data.status === 'running') {
