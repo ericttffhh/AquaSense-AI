@@ -1,0 +1,522 @@
+{
+  "alert_20260816_154219.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡) | ⚡ 受驚緊迫激游 (均速 25.7px/s)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:42:19",
+    "clarity": 524.0,
+    "fish_count": 2,
+    "speed": 25.7
+  },
+  "alert_20260816_154658.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:46:58",
+    "clarity": 165.4,
+    "fish_count": 3,
+    "speed": 5.4
+  },
+  "alert_20260816_154758.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:47:58",
+    "clarity": 191.2,
+    "fish_count": 2,
+    "speed": 1.6
+  },
+  "alert_20260816_155031.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:50:31",
+    "clarity": 164.2,
+    "fish_count": 1,
+    "speed": 4.3
+  },
+  "alert_20260816_155456.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:54:56",
+    "clarity": 184.2,
+    "fish_count": 2,
+    "speed": 1.7
+  },
+  "alert_20260816_155652.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:56:52",
+    "clarity": 183.8,
+    "fish_count": 1,
+    "speed": 5.3
+  },
+  "alert_20260816_155752.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:57:52",
+    "clarity": 212.8,
+    "fish_count": 2,
+    "speed": 2.3
+  },
+  "alert_20260816_155852.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:58:52",
+    "clarity": 190.9,
+    "fish_count": 2,
+    "speed": 2.5
+  },
+  "alert_20260816_155959.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 15:59:59",
+    "clarity": 706.0,
+    "fish_count": 2,
+    "speed": 3.8
+  },
+  "alert_20260816_160109.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:01:09",
+    "clarity": 199.8,
+    "fish_count": 1,
+    "speed": 2.4
+  },
+  "alert_20260816_160302.jpg": {
+    "reason": "🌿 綠藻滋生/水體發綠",
+    "severity": "warning",
+    "timestamp": "2026-08-16 16:03:02",
+    "clarity": 368.3,
+    "fish_count": 5,
+    "speed": 2.1
+  },
+  "alert_20260816_160547.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:05:47",
+    "clarity": 478.1,
+    "fish_count": 1,
+    "speed": 6.0
+  },
+  "alert_20260816_161848.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:18:48",
+    "clarity": 449.9,
+    "fish_count": 2,
+    "speed": 4.2
+  },
+  "alert_20260816_162001.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:20:01",
+    "clarity": 504.3,
+    "fish_count": 2,
+    "speed": 4.7
+  },
+  "alert_20260816_162102.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:21:02",
+    "clarity": 471.2,
+    "fish_count": 2,
+    "speed": 4.7
+  },
+  "alert_20260816_162202.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:22:02",
+    "clarity": 477.5,
+    "fish_count": 2,
+    "speed": 3.5
+  },
+  "alert_20260816_162302.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:23:02",
+    "clarity": 476.8,
+    "fish_count": 2,
+    "speed": 3.0
+  },
+  "alert_20260816_162402.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:24:02",
+    "clarity": 492.6,
+    "fish_count": 2,
+    "speed": 3.7
+  },
+  "alert_20260816_162515.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:25:15",
+    "clarity": 460.9,
+    "fish_count": 2,
+    "speed": 5.5
+  },
+  "alert_20260816_162615.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:26:15",
+    "clarity": 420.6,
+    "fish_count": 1,
+    "speed": 1.8
+  },
+  "alert_20260816_162816.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:28:16",
+    "clarity": 471.9,
+    "fish_count": 3,
+    "speed": 5.7
+  },
+  "alert_20260816_162923.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:29:23",
+    "clarity": 399.7,
+    "fish_count": 1,
+    "speed": 11.9
+  },
+  "alert_20260816_163039.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:30:39",
+    "clarity": 432.9,
+    "fish_count": 1,
+    "speed": 3.4
+  },
+  "alert_20260816_163148.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:31:48",
+    "clarity": 407.3,
+    "fish_count": 1,
+    "speed": 4.7
+  },
+  "alert_20260816_163248.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:32:48",
+    "clarity": 472.5,
+    "fish_count": 1,
+    "speed": 7.1
+  },
+  "alert_20260816_163350.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:33:50",
+    "clarity": 474.2,
+    "fish_count": 1,
+    "speed": 23.7
+  },
+  "alert_20260816_163522.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:35:22",
+    "clarity": 428.7,
+    "fish_count": 1,
+    "speed": 2.1
+  },
+  "alert_20260816_163627.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:36:27",
+    "clarity": 477.1,
+    "fish_count": 1,
+    "speed": 5.6
+  },
+  "alert_20260816_163843.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:38:43",
+    "clarity": 422.9,
+    "fish_count": 2,
+    "speed": 3.2
+  },
+  "alert_20260816_163943.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:39:43",
+    "clarity": 425.2,
+    "fish_count": 2,
+    "speed": 1.5
+  },
+  "alert_20260816_164043.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:40:43",
+    "clarity": 417.1,
+    "fish_count": 2,
+    "speed": 4.4
+  },
+  "alert_20260816_164157.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%) | ⚡ 受驚緊迫激游 (均速 14.6px/s)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:41:57",
+    "clarity": 429.2,
+    "fish_count": 3,
+    "speed": 14.6
+  },
+  "alert_20260816_164257.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:42:57",
+    "clarity": 402.9,
+    "fish_count": 2,
+    "speed": 1.9
+  },
+  "alert_20260816_164357.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:43:57",
+    "clarity": 429.4,
+    "fish_count": 2,
+    "speed": 5.2
+  },
+  "alert_20260816_164500.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:45:00",
+    "clarity": 416.5,
+    "fish_count": 2,
+    "speed": 4.2
+  },
+  "alert_20260816_164600.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:46:00",
+    "clarity": 427.2,
+    "fish_count": 2,
+    "speed": 2.6
+  },
+  "alert_20260816_164700.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:47:00",
+    "clarity": 452.3,
+    "fish_count": 2,
+    "speed": 2.6
+  },
+  "alert_20260816_164800.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:48:00",
+    "clarity": 462.3,
+    "fish_count": 2,
+    "speed": 1.5
+  },
+  "alert_20260816_164900.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:49:00",
+    "clarity": 422.0,
+    "fish_count": 2,
+    "speed": 3.0
+  },
+  "alert_20260816_165011.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:50:11",
+    "clarity": 442.7,
+    "fish_count": 1,
+    "speed": 15.0
+  },
+  "alert_20260816_165120.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:51:20",
+    "clarity": 405.7,
+    "fish_count": 1,
+    "speed": 2.2
+  },
+  "alert_20260816_165227.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:52:27",
+    "clarity": 432.4,
+    "fish_count": 2,
+    "speed": 4.8
+  },
+  "alert_20260816_165327.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:53:27",
+    "clarity": 427.5,
+    "fish_count": 1,
+    "speed": 1.8
+  },
+  "alert_20260816_165559.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:55:59",
+    "clarity": 356.4,
+    "fish_count": 3,
+    "speed": 11.2
+  },
+  "alert_20260816_165705.jpg": {
+    "reason": "🌿 綠藻滋生/水體發綠",
+    "severity": "warning",
+    "timestamp": "2026-08-16 16:57:05",
+    "clarity": 264.8,
+    "fish_count": 3,
+    "speed": 2.5
+  },
+  "alert_20260816_165829.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:58:29",
+    "clarity": 292.9,
+    "fish_count": 1,
+    "speed": 2.4
+  },
+  "alert_20260816_165932.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 16:59:32",
+    "clarity": 298.6,
+    "fish_count": 4,
+    "speed": 1.4
+  },
+  "alert_20260816_170032.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%) | ⚡ 受驚緊迫激游 (均速 18.8px/s)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:00:32",
+    "clarity": 311.0,
+    "fish_count": 2,
+    "speed": 18.8
+  },
+  "alert_20260816_170132.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:01:32",
+    "clarity": 327.6,
+    "fish_count": 3,
+    "speed": 8.8
+  },
+  "alert_20260816_170856.jpg": {
+    "reason": "🌿 綠藻滋生/水體發綠",
+    "severity": "warning",
+    "timestamp": "2026-08-16 17:08:56",
+    "clarity": 170.3,
+    "fish_count": 0,
+    "speed": 0.0
+  },
+  "alert_20260816_171129.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:11:29",
+    "clarity": 468.7,
+    "fish_count": 2,
+    "speed": 0.0
+  },
+  "alert_20260816_171317.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:13:17",
+    "clarity": 488.4,
+    "fish_count": 1,
+    "speed": 1.5
+  },
+  "alert_20260816_171536.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:15:36",
+    "clarity": 487.8,
+    "fish_count": 1,
+    "speed": 2.0
+  },
+  "alert_20260816_171720.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:17:20",
+    "clarity": 472.9,
+    "fish_count": 1,
+    "speed": 1.7
+  },
+  "alert_20260816_172117.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:21:17",
+    "clarity": 488.9,
+    "fish_count": 1,
+    "speed": 1.3
+  },
+  "alert_20260816_172556.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:25:56",
+    "clarity": 504.5,
+    "fish_count": 4,
+    "speed": 6.6
+  },
+  "alert_20260816_172657.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:26:57",
+    "clarity": 482.8,
+    "fish_count": 5,
+    "speed": 2.5
+  },
+  "alert_20260816_172819.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:28:19",
+    "clarity": 487.5,
+    "fish_count": 2,
+    "speed": 4.0
+  },
+  "alert_20260816_172930.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:29:30",
+    "clarity": 489.2,
+    "fish_count": 4,
+    "speed": 0.6
+  },
+  "alert_20260816_173859.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:38:59",
+    "clarity": 519.2,
+    "fish_count": 4,
+    "speed": 4.6
+  },
+  "alert_20260816_174132.jpg": {
+    "reason": "🚨 疑似缺氧浮頭 (水面聚集 > 65%)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:41:32",
+    "clarity": 504.3,
+    "fish_count": 1,
+    "speed": 6.6
+  },
+  "alert_20260816_175035.jpg": {
+    "reason": "🌿 綠藻滋生/水體發綠",
+    "severity": "warning",
+    "timestamp": "2026-08-16 17:50:35",
+    "clarity": 99.2,
+    "fish_count": 1,
+    "speed": 25.8
+  },
+  "alert_20260816_175702.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 17:57:02",
+    "clarity": 632.0,
+    "fish_count": 2,
+    "speed": 2.1
+  },
+  "alert_20260816_180052.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 18:00:52",
+    "clarity": 668.1,
+    "fish_count": 2,
+    "speed": 11.6
+  },
+  "alert_20260816_180254.jpg": {
+    "reason": "🚨 姿態傾斜偏斜 (1 隻失衡)",
+    "severity": "danger",
+    "timestamp": "2026-08-16 18:02:54",
+    "clarity": 627.2,
+    "fish_count": 2,
+    "speed": 2.3
+  }
+}

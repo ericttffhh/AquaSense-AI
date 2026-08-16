@@ -3,4 +3,5 @@ train: images/train
 val: images/train
 names:
   0: koi_angelfish
-  1: black_angelfish
+  1: marble_angelfish
+  2: silver_titan_angelfish
