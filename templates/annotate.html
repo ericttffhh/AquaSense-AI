@@ -291,9 +291,23 @@
 
             <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 8px 0;">
 
-            <div style="font-weight: 600; font-size: 0.95rem;">訓練狀態日誌</div>
-            <div id="trainLogBox" style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; font-size: 0.8rem; color: var(--accent-cyan); height: 140px; overflow-y: auto; line-height: 1.4;">
-                尚未開始訓練。標註完成後點擊右上角「一鍵訓練專屬模型」即可開始！
+            <div style="font-weight: 600; font-size: 0.95rem; display:flex; justify-content:space-between; align-items:center;">
+                <span>⚡ AI 訓練運算核心</span>
+            </div>
+            <div style="margin-top: 4px;">
+                <select id="trainEngineSelect" style="width: 100%; padding: 6px 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 8px; color: var(--text-main); font-size: 0.82rem;">
+                    <option value="windows">⚡ 遠端 Windows RTX 3060 (極速 GPU 30秒)</option>
+                    <option value="local">🖥️ 本機 Mac (MPS/CPU)</option>
+                </select>
+            </div>
+            <div id="windowsIpGroup" style="margin-top: 6px;">
+                <label style="font-size: 0.75rem; color: var(--text-sub);">Windows 訓練端 IP / 網址：</label>
+                <input type="text" id="txtWindowsIp" value="http://192.168.0.119:5002" style="width: 100%; padding: 4px 8px; background: rgba(0,0,0,0.5); border: 1px solid var(--card-border); border-radius: 6px; color: var(--accent-cyan); font-size: 0.8rem;" placeholder="http://192.168.0.xxx:5002">
+            </div>
+
+            <div style="font-weight: 600; font-size: 0.95rem; margin-top: 8px;">訓練狀態日誌</div>
+            <div id="trainLogBox" style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; font-size: 0.8rem; color: var(--accent-cyan); height: 120px; overflow-y: auto; line-height: 1.4;">
+                尚未開始訓練。標註完成後點擊右上角「一鍵訓練專屬模型」即可無線啟動！
             </div>
         </div>
     </div>
@@ -706,30 +720,54 @@
             }
         });
 
+        // 訓練運算核心切換事件
+        const trainEngineSelect = document.getElementById('trainEngineSelect');
+        const windowsIpGroup = document.getElementById('windowsIpGroup');
+        trainEngineSelect.addEventListener('change', () => {
+            windowsIpGroup.style.display = (trainEngineSelect.value === 'windows') ? 'block' : 'none';
+        });
+
         // 一鍵訓練按鈕與狀態輪詢
         const btnStartTraining = document.getElementById('btnStartTraining');
         const trainLogBox = document.getElementById('trainLogBox');
 
         btnStartTraining.addEventListener('click', async () => {
+            const engine = trainEngineSelect.value;
+            const windowsIp = document.getElementById('txtWindowsIp').value.trim();
+
             btnStartTraining.disabled = true;
             btnStartTraining.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 訓練進行中...';
-            trainLogBox.innerHTML = "⏳ 正在啟動 YOLOv8 Transfer Learning 訓練...";
+            trainLogBox.innerHTML = (engine === 'windows')
+                ? `⏳ 正在連線 Windows 訓練端 (${windowsIp}) 並同步標註資料集...`
+                : "⏳ 正在啟動本機 Mac YOLOv8 深度學習訓練...";
 
             try {
-                await fetch('/api/start_train', { method: 'POST' });
-            } catch(e) {}
+                const res = await fetch('/api/start_train', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ engine: engine, windows_ip: windowsIp })
+                });
+                const data = await res.json();
+                if (data.status === 'running') {
+                    trainLogBox.innerHTML = `<div>⚠️ 訓練已在進行中...</div>`;
+                }
+            } catch(e) {
+                trainLogBox.innerHTML = `<div>❌ 觸發請求失敗: ${e.message}</div>`;
+            }
 
             // 輪詢狀態
             const timer = setInterval(async () => {
-                const res = await fetch('/api/train_status');
-                const st = await res.json();
-                trainLogBox.innerHTML = `<div>${st.log}</div>`;
-                if (!st.running) {
-                    clearInterval(timer);
-                    btnStartTraining.disabled = false;
-                    btnStartTraining.innerHTML = '<i class="fa-solid fa-check"></i> 訓練完成！';
-                }
-            }, 2000);
+                try {
+                    const res = await fetch('/api/train_status');
+                    const st = await res.json();
+                    trainLogBox.innerHTML = `<div>${st.log}</div>`;
+                    if (!st.running) {
+                        clearInterval(timer);
+                        btnStartTraining.disabled = false;
+                        btnStartTraining.innerHTML = '<i class="fa-solid fa-check"></i> 訓練完成！';
+                    }
+                } catch(err) {}
+            }, 1500);
         });
 
         // --- 鏡頭切換與預覽 Modal 控制邏輯 ---

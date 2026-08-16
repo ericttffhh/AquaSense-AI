@@ -274,15 +274,72 @@ def save_label():
 
     return jsonify({'status': 'success', 'message': '標註已保存'})
 
-training_status = {"running": False, "log": "尚未開始訓練"}
+training_status = {"running": False, "log": "尚未開始訓練", "target": "local"}
+
+def run_remote_windows_train(windows_url):
+    """跨機無線協同訓練：向 Windows RTX 3060 節點發送標註資料並執行訓練，完成後自動下載模型"""
+    global training_status
+    training_status["running"] = True
+    training_status["log"] = f"📡 正在連線 Windows 訓練節點 ({windows_url})..."
+
+    try:
+        import requests
+        # 1. 收集 Mac 上的所有標籤檔
+        labels_dict = {}
+        for txt_file in glob.glob(os.path.join(LABEL_DIR, "*.txt")):
+            bname = os.path.basename(txt_file)
+            with open(txt_file, 'r', encoding='utf-8') as f:
+                labels_dict[bname] = f.read()
+
+        training_status["log"] = f"📤 正在無線同步 {len(labels_dict)} 份標註資料至 Windows RTX 3060..."
+        sync_res = requests.post(f"{windows_url}/api/sync_dataset", json={"labels": labels_dict}, timeout=15)
+        
+        # 2. 觸發 Windows GPU 訓練
+        training_status["log"] = "⚡ 已通知 Windows 啟動 RTX 3060 (CUDA) 深度學習加速微調..."
+        start_res = requests.post(f"{windows_url}/api/start_train", timeout=10)
+
+        # 3. 輪詢進度直到完成
+        while True:
+            time.sleep(2.0)
+            try:
+                st_res = requests.get(f"{windows_url}/api/train_status", timeout=10)
+                st_data = st_res.json()
+                training_status["log"] = f"🖥️ [Windows RTX] {st_data.get('log', '訓練中...')}"
+                
+                if st_data.get("completed"):
+                    # 4. 自動下載訓練好的 best.pt 回 Mac！
+                    training_status["log"] = "📥 訓練完成！正在將最新最優模型 (best.pt) 無線下載回 Mac..."
+                    down_res = requests.get(f"{windows_url}/api/download_model", stream=True, timeout=30)
+                    if down_res.status_code == 200:
+                        save_path = os.path.join(BASE_DIR, "runs", "detect", "custom_angelfish_model", "weights")
+                        os.makedirs(save_path, exist_ok=True)
+                        dest_file = os.path.join(save_path, "best.pt")
+                        with open(dest_file, 'wb') as f:
+                            for chunk in down_res.iter_content(chunk_size=8192):
+                                f.write(chunk)
+                        training_status["log"] = "🎉 [Windows RTX 3060] 極速訓練完成！最新最優 AI 權重已自動同步至 Mac 端！"
+                    else:
+                        training_status["log"] = "⚠️ 模型已在 Windows 訓練完成，但自動下載遇到狀態碼錯誤。"
+                    break
+                elif not st_data.get("running") and not st_data.get("completed"):
+                    if st_data.get("error"):
+                        training_status["log"] = f"❌ Windows 訓練報錯: {st_data.get('error')}"
+                    break
+            except Exception as poll_e:
+                time.sleep(1.0)
+
+    except Exception as e:
+        training_status["log"] = f"❌ 無線連線 Windows 失敗: {str(e)}。請確認 Windows 上的 train_server.py 已啟動且在同個 Wi-Fi 網路。"
+    finally:
+        training_status["running"] = False
 
 def run_train_thread():
     global training_status
     training_status["running"] = True
     
-    existing_weights = "runs/detect/custom_angelfish_model/weights/best.pt"
+    existing_weights = os.path.join(BASE_DIR, "runs", "detect", "custom_angelfish_model", "weights", "best.pt")
     if os.path.exists(existing_weights):
-        training_status["log"] = f"🎯 載入既有模型 {existing_weights}，啟動接續強化微調 (Continual Fine-Tuning) 以抑制背景誤判..."
+        training_status["log"] = f"🎯 載入既有模型 {existing_weights}，啟動接續強化微調 (Continual Fine-Tuning)..."
         base_pt = existing_weights
     else:
         training_status["log"] = "🚀 載入 YOLOv8n 基底，啟動全新神經網路訓練..."
@@ -296,24 +353,40 @@ def run_train_thread():
             epochs=35,
             imgsz=640,
             batch=8,
+            device='mps' if torch.backends.mps.is_available() else 'cpu',
             name='custom_angelfish_model',
             exist_ok=True
         )
-        training_status["running"] = False
-        training_status["log"] = "🎉 專屬模型接續微調成功！背景誤判已大幅抑制，權重已更新至 best.pt"
+        training_status["log"] = "🎉 本機 Mac 專屬模型微調成功！權重已更新至 best.pt"
     except Exception as e:
-        training_status["running"] = False
         training_status["log"] = f"❌ 訓練失敗: {e}"
+    finally:
+        training_status["running"] = False
 
 @app.route('/api/start_train', methods=['POST'])
 def start_train():
     global training_status
     if training_status["running"]:
-        return jsonify({"status": "running", "message": "訓練已在進行中"})
+        return jsonify({"status": "running", "message": "訓練已在進行中"}), 400
     
-    t = threading.Thread(target=run_train_thread, daemon=True)
+    data = request.json or {}
+    engine_type = data.get('engine', 'local') # 'local' 或 'windows'
+    windows_ip = data.get('windows_ip', 'http://192.168.0.119:5002')
+
+    if not windows_ip.startswith('http'):
+        windows_ip = f"http://{windows_ip}"
+    if ':5002' not in windows_ip:
+        windows_ip = f"{windows_ip}:5002"
+
+    if engine_type == 'windows':
+        training_status["target"] = "windows"
+        t = threading.Thread(target=run_remote_windows_train, args=(windows_ip,), daemon=True)
+    else:
+        training_status["target"] = "local"
+        t = threading.Thread(target=run_train_thread, daemon=True)
+    
     t.start()
-    return jsonify({"status": "started", "message": "已成功啟動訓練"})
+    return jsonify({"status": "started", "message": f"已啟動訓練任務 ({engine_type})"})
 
 @app.route('/api/train_status')
 def get_train_status():
