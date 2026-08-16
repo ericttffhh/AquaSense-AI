@@ -355,19 +355,26 @@ def get_train_status():
 
 import base64
 
+_cached_model = None
+_cached_weights_path = None
+_model_lock = threading.Lock()
+
 def get_trained_model():
-    """載入最新微調模型或預訓練基底模型"""
+    """載入最新微調模型或預訓練基底模型 (含快取極速響應)"""
+    global _cached_model, _cached_weights_path
     best_weights = os.path.join(BASE_DIR, "runs", "detect", "custom_angelfish_model", "weights", "best.pt")
-    if os.path.exists(best_weights):
-        weights_path = best_weights
-    else:
-        weights_path = "yolov8n.pt"
-    
-    try:
-        from ultralytics import YOLO
-        return YOLO(weights_path), weights_path
-    except Exception as e:
-        return None, str(e)
+    target_path = best_weights if os.path.exists(best_weights) else "yolov8n.pt"
+
+    with _model_lock:
+        if _cached_model is not None and _cached_weights_path == target_path:
+            return _cached_model, target_path
+        try:
+            from ultralytics import YOLO
+            _cached_model = YOLO(target_path)
+            _cached_weights_path = target_path
+            return _cached_model, target_path
+        except Exception as e:
+            return None, str(e)
 
 @app.route('/api/test_image_model', methods=['POST'])
 def test_image_model():
@@ -527,4 +534,4 @@ def test_video_feed():
 if __name__ == '__main__':
     print("🎨 專屬魚隻視覺標註與AI測試工作台啟動中...")
     print("👉 請開啟瀏覽器：http://localhost:5001")
-    app.run(host='0.0.0.0', port=5001, debug=False)
+    app.run(host='0.0.0.0', port=5001, debug=False, threaded=True)
