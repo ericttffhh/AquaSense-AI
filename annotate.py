@@ -9,8 +9,9 @@ import time
 
 app = Flask(__name__)
 
-IMAGE_DIR = "dataset/images/train"
-LABEL_DIR = "dataset/labels/train"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMAGE_DIR = os.path.join(BASE_DIR, "dataset", "images", "train")
+LABEL_DIR = os.path.join(BASE_DIR, "dataset", "labels", "train")
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(LABEL_DIR, exist_ok=True)
 
@@ -58,6 +59,16 @@ def api_cameras():
             pass
 
     # 預設加入 DroidCam 及自訂 IP 鏡頭選項
+    client_ip = request.remote_addr
+    if client_ip and client_ip not in ['127.0.0.1', '192.168.0.120', '192.168.0.119']:
+        available_cams.append({
+            'id': f'http://{client_ip}:4747/video',
+            'name': f'📱 手機 DroidCam 鏡頭 ({client_ip})'
+        })
+    available_cams.append({
+        'id': 'http://192.168.0.119:4747/video',
+        'name': '📱 DroidCam IP 鏡頭 (192.168.0.119)'
+    })
     available_cams.append({
         'id': 'http://192.168.0.120:4747/video',
         'name': '📱 DroidCam IP 鏡頭 (192.168.0.120)'
@@ -138,9 +149,32 @@ def api_capture_dataset():
 
     cap = cv2.VideoCapture(cam_source)
     if not cap.isOpened():
-        cap = cv2.VideoCapture(0) # 嘗試預設本地 Webcam
-        if not cap.isOpened():
-            return jsonify({'status': 'error', 'message': f'無法連接至鏡頭 {cam_source}'}), 400
+        # 如果是 IP 鏡頭且連線失敗，嘗試使用當前客戶端 IP 或常見 DroidCam 備援 IP 進行智慧探測
+        client_ip = request.remote_addr
+        alt_sources = [
+            f"http://{client_ip}:4747/video",
+            "http://192.168.0.119:4747/video",
+            "http://192.168.0.120:4747/video",
+            0
+        ]
+        for alt in alt_sources:
+            try:
+                temp_cap = cv2.VideoCapture(alt)
+                if temp_cap.isOpened():
+                    ret, test_f = temp_cap.read()
+                    if ret and test_f is not None:
+                        cap = temp_cap
+                        cam_source = alt
+                        break
+                    temp_cap.release()
+            except Exception:
+                pass
+
+    if not cap or not cap.isOpened():
+        return jsonify({
+            'status': 'error', 
+            'message': f'❌ 無法連接至手機 DroidCam 鏡頭！請確認手機 DroidCam App 已開啟，並檢查手機畫面上顯示的 WiFi IP（例如：http://{request.remote_addr}:4747/video）。'
+        }), 400
 
     saved_count = 0
     start_time = time.time()
