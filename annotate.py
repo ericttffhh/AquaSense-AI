@@ -14,7 +14,7 @@ LABEL_DIR = "dataset/labels/train"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 os.makedirs(LABEL_DIR, exist_ok=True)
 
-# 建立 YOLO 3大品種資料集設定檔 (三色神仙 vs 黑神仙 vs 銀泰坦神仙)
+# 建立 YOLO 3大品種資料集設定檔 (三色神仙 vs 大理石神仙 vs 銀泰坦神仙)
 DATASET_YAML = "dataset/data.yaml"
 data_config = {
     'path': os.path.abspath('dataset'),
@@ -22,7 +22,7 @@ data_config = {
     'val': 'images/train',
     'names': {
         0: 'koi_angelfish',            # 🐠 三色神仙魚 (花色/橙頂白底)
-        1: 'black_angelfish',          # 🐟 黑神仙魚 (深黑墨紋)
+        1: 'marble_angelfish',         # 🐟 大理石神仙魚 (黑白大理石墨斑)
         2: 'silver_titan_angelfish'    # ✨ 銀泰坦神仙魚 (銀白金屬光澤)
     }
 }
@@ -311,11 +311,11 @@ def test_image_model():
             conf = float(box.conf[0].item())
             xyxy = box.xyxy[0].tolist() # [x1, y1, x2, y2]
             
-            # 繪製邊界框與標籤 (0: 三色神仙, 1: 黑神仙, 2: 銀泰坦神仙)
+            # 繪製邊界框與標籤 (0: 三色神仙, 1: 大理石神仙, 2: 銀泰坦神仙)
             if cls_id == 0:
                 c_name, color = "koi_angelfish (三色)", (118, 230, 0) # 亮綠
             elif cls_id == 1:
-                c_name, color = "black_angelfish (黑神仙)", (251, 64, 224) # 亮紫
+                c_name, color = "marble_angelfish (大理石)", (251, 64, 224) # 亮紫
             else:
                 c_name, color = "silver_titan (銀泰坦)", (255, 229, 0) # 亮冰藍/金屬銀 (BGR)
             
@@ -378,7 +378,7 @@ def generate_test_stream_frames(source_str):
                         if cls_id == 0:
                             c_name, color = "koi_angelfish (三色)", (118, 230, 0)
                         elif cls_id == 1:
-                            c_name, color = "black_angelfish (黑神仙)", (251, 64, 224)
+                            c_name, color = "marble_angelfish (大理石)", (251, 64, 224)
                         else:
                             c_name, color = "silver_titan (銀泰坦)", (255, 229, 0)
                             

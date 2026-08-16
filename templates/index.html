@@ -772,7 +772,7 @@
                     container.innerHTML = data.fish_profiles.map((p, idx) => {
                         let borderCol = '#00e676';
                         let icon = '🐠';
-                        if (p.name.includes('黑神仙')) { borderCol = '#d500f9'; icon = '🐟'; }
+                        if (p.name.includes('大理石') || p.name.includes('黑神仙')) { borderCol = '#d500f9'; icon = '🐟'; }
                         else if (p.name.includes('銀泰坦')) { borderCol = '#00e5ff'; icon = '✨'; }
 
                         let badgeBg = p.health_score >= 90 ? 'rgba(0,230,118,0.2)' : (p.health_score >= 75 ? 'rgba(255,179,0,0.2)' : 'rgba(255,50,50,0.2)');

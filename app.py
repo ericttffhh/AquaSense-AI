@@ -242,10 +242,10 @@ class CameraStreamManager:
         self.show_heatmap = False
         self.heatmap_grid = np.zeros((480, 640), dtype=np.float32)
 
-        # 4 隻神仙魚個體身分檔案庫 (Individual Biometric Profiles - 支援三色、黑神仙與新入缸銀泰坦)
+        # 4 隻神仙魚個體身分檔案庫 (Individual Biometric Profiles - 支援三色、大理石神仙與新入缸銀泰坦)
         self.fish_profiles = {
             1: {"id": 1, "name": "三色神仙魚", "type": "三色斑紋", "length_mm": 68.5, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 98, "top_pct": 10, "mid_pct": 75, "bot_pct": 15},
-            2: {"id": 2, "name": "黑神仙魚", "type": "深黑墨紋", "length_mm": 72.0, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 97, "top_pct": 15, "mid_pct": 70, "bot_pct": 15},
+            2: {"id": 2, "name": "大理石神仙魚", "type": "大理石墨斑", "length_mm": 72.0, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 97, "top_pct": 15, "mid_pct": 70, "bot_pct": 15},
             3: {"id": 3, "name": "銀泰坦神仙 (A)", "type": "金屬亮銀", "length_mm": 65.0, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 99, "top_pct": 12, "mid_pct": 78, "bot_pct": 10},
             4: {"id": 4, "name": "銀泰坦神仙 (B)", "type": "金屬亮銀", "length_mm": 64.2, "dist_m": 0.0, "avg_spd": 0.0, "fav_layer": "中層 (舒適區)", "health_score": 99, "top_pct": 10, "mid_pct": 80, "bot_pct": 10}
         }
@@ -573,7 +573,7 @@ class CameraStreamManager:
                 box_col = (0, 230, 118) # 亮綠 (BGR)
                 prof_id = 1
             elif model_cls == 1:
-                fish_name = "黑神仙"
+                fish_name = "大理石神仙"
                 box_col = (251, 64, 224) # 亮紫 (BGR)
                 prof_id = 2
             elif model_cls == 2:
@@ -585,7 +585,7 @@ class CameraStreamManager:
                 # 備援光譜指紋 (當模型尚未重新微調完成時)：
                 b_val = fish_brightness_list[idx]
                 if b_val < 75.0:
-                    fish_name = "黑神仙"
+                    fish_name = "大理石神仙"
                     box_col = (251, 64, 224)
                     prof_id = 2
                 elif b_val > 140.0:
