@@ -71,21 +71,69 @@ def api_cameras():
         })
     return jsonify({'cameras': available_cams})
 
-def generate_preview_frames(source_str):
-    """即時鏡頭串流影格生成器"""
-    if isinstance(source_str, str) and source_str.isdigit():
-        cam_source = int(source_str)
-    else:
-        cam_source = source_str
+class StreamCaptureManager:
+    """單一長效鏡頭串流管理器 (徹底避免 DroidCam 單一連線被佔用衝突)"""
+    def __init__(self):
+        self.current_source = 'http://192.168.0.120:4747/video'
+        self.cap = None
+        self.latest_frame = None
+        self.lock = threading.Lock()
+        self.running = True
+        self.thread = threading.Thread(target=self._update_loop, daemon=True)
+        self.thread.start()
 
-    cap = cv2.VideoCapture(cam_source)
-    if not cap.isOpened() and isinstance(cam_source, str) and cam_source != 0:
-        cap = cv2.VideoCapture(0)
+    def set_source(self, source):
+        if not source: return
+        with self.lock:
+            if str(self.current_source) != str(source):
+                self.current_source = source
+                if self.cap:
+                    try: self.cap.release()
+                    except Exception: pass
+                self.cap = None
+
+    def _update_loop(self):
+        while self.running:
+            if not self.current_source:
+                time.sleep(0.05)
+                continue
+
+            with self.lock:
+                src = self.current_source
+                if self.cap is None or not self.cap.isOpened():
+                    target = int(src) if (isinstance(src, str) and src.isdigit()) else src
+                    try:
+                        self.cap = cv2.VideoCapture(target)
+                    except Exception:
+                        self.cap = None
+
+            if self.cap and self.cap.isOpened():
+                ret, frame = self.cap.read()
+                if ret and frame is not None:
+                    with self.lock:
+                        self.latest_frame = frame
+                else:
+                    time.sleep(0.01)
+            else:
+                time.sleep(0.1)
+
+    def get_frame(self):
+        with self.lock:
+            if self.latest_frame is not None:
+                return self.latest_frame.copy()
+            return None
+
+cam_stream_mgr = StreamCaptureManager()
+
+def generate_preview_frames(source_str):
+    """即時鏡頭串流影格生成器 (共用單一鏡頭通道)"""
+    if source_str:
+        cam_stream_mgr.set_source(source_str)
 
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret:
+            frame = cam_stream_mgr.get_frame()
+            if frame is None:
                 time.sleep(0.05)
                 continue
 
@@ -98,32 +146,27 @@ def generate_preview_frames(source_str):
             frame_bytes = buffer.tobytes()
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            time.sleep(0.03)
+            time.sleep(0.033)
     except Exception:
         pass
-    finally:
-        if cap and cap.isOpened():
-            cap.release()
 
 @app.route('/video_feed')
 def video_feed():
     """即時鏡頭預覽串流 (MJPEG)"""
-    source = request.args.get('source', '0')
+    source = request.args.get('source', 'http://192.168.0.120:4747/video')
     return Response(generate_preview_frames(source), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/api/capture_dataset', methods=['POST'])
 def api_capture_dataset():
-    """從指定鏡頭自動追加採集最新魚隻游動照片 (保留原有已標註樣本)"""
+    """從指定鏡頭自動追加採集最新魚隻游動照片 (共用鏡頭通道，零衝突)"""
     data = request.json or {}
-    source_input = data.get('camera_source') or data.get('stream_url', '0')
+    source_input = data.get('camera_source') or data.get('stream_url', 'http://192.168.0.120:4747/video')
     num_samples = int(data.get('samples', 50))
     interval = float(data.get('interval', 0.8))
     clear_old = data.get('clear_old', False) # 預設保留原有樣本
 
-    if isinstance(source_input, str) and source_input.isdigit():
-        cam_source = int(source_input)
-    else:
-        cam_source = source_input
+    if source_input:
+        cam_stream_mgr.set_source(source_input)
 
     if clear_old:
         for f in glob.glob(os.path.join(IMAGE_DIR, "*.jpg")):
@@ -143,42 +186,24 @@ def api_capture_dataset():
             if len(parts) >= 2 and parts[-1].isdigit():
                 start_idx = max(start_idx, int(parts[-1]))
 
-    cap = cv2.VideoCapture(cam_source)
-    if not cap.isOpened():
-        # 如果是 IP 鏡頭且連線失敗，嘗試使用當前客戶端 IP 或常見 DroidCam 備援 IP 進行智慧探測
-        client_ip = request.remote_addr
-        alt_sources = [
-            f"http://{client_ip}:4747/video",
-            "http://192.168.0.119:4747/video",
-            "http://192.168.0.120:4747/video",
-            0
-        ]
-        for alt in alt_sources:
-            try:
-                temp_cap = cv2.VideoCapture(alt)
-                if temp_cap.isOpened():
-                    ret, test_f = temp_cap.read()
-                    if ret and test_f is not None:
-                        cap = temp_cap
-                        cam_source = alt
-                        break
-                    temp_cap.release()
-            except Exception:
-                pass
+    # 等待確認鏡頭已有影格輸出
+    wait_start = time.time()
+    while cam_stream_mgr.get_frame() is None and (time.time() - wait_start < 6.0):
+        time.sleep(0.1)
 
-    if not cap or not cap.isOpened():
+    if cam_stream_mgr.get_frame() is None:
         return jsonify({
             'status': 'error', 
-            'message': f'❌ 無法連接至手機 DroidCam 鏡頭！請確認手機 DroidCam App 已開啟，並檢查手機畫面上顯示的 WiFi IP（例如：http://{request.remote_addr}:4747/video）。'
+            'message': f'❌ 無法從鏡頭取得即時影格！請確認手機 DroidCam App 保持開啟並在前景運行。'
         }), 400
 
     saved_count = 0
     start_time = time.time()
     last_t = 0
     while saved_count < num_samples and (time.time() - start_time < 120):
-        ret, frame = cap.read()
-        if not ret:
-            time.sleep(0.1)
+        frame = cam_stream_mgr.get_frame()
+        if frame is None:
+            time.sleep(0.05)
             continue
         cur_t = time.time()
         if cur_t - last_t >= interval: # 依照設定間隔抓取照片
@@ -188,7 +213,6 @@ def api_capture_dataset():
             filename = os.path.join(IMAGE_DIR, f"angelfish_{file_idx:03d}.jpg")
             cv2.imwrite(filename, frame)
 
-    cap.release()
     total_now = len(glob.glob(os.path.join(IMAGE_DIR, "*.jpg")))
     return jsonify({
         'status': 'success', 
