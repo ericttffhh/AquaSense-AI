@@ -406,7 +406,8 @@ def test_image_model():
     if frame is None:
         return jsonify({'status': 'error', 'message': '讀取影像失敗'}), 400
 
-    results = model(frame, conf=0.25, verbose=False)
+    conf_val = float(data.get('conf', 0.20))
+    results = model(frame, conf=conf_val, verbose=False)
     detections = []
     
     for r in results:

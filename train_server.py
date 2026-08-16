@@ -125,12 +125,16 @@ def run_training_job():
 
         results = model.train(
             data=yaml_path,
-            epochs=35,
+            epochs=50,
             imgsz=640,
             batch=16 if cuda_ok else 8,
             device=device_choice,
             workers=0,  # Windows 線程中執行 DataLoader 必須設為 0 以防多行程 crash
             name='custom_angelfish_model',
+            fliplr=0.5,
+            hsv_h=0.015,
+            hsv_s=0.7,
+            hsv_v=0.4,
             exist_ok=True,
             verbose=False
         )

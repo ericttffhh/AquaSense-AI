@@ -401,11 +401,18 @@
 
             <!-- Mode A: 照片測試畫面 -->
             <div id="photoTestView" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--card-border);">
                     <div style="font-size: 0.9rem; color: var(--text-sub);" id="lblTestImageTitle">選擇相片執行 AI 辨識...</div>
-                    <div style="display: flex; gap: 8px;">
-                        <button id="btnTestPrev" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;"><i class="fa-solid fa-chevron-left"></i> 上一張</button>
-                        <button id="btnTestNext" class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;">下一張 <i class="fa-solid fa-chevron-right"></i></button>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-sub);">
+                            <span>置信度門檻:</span>
+                            <input type="range" id="testConfSlider" min="0.10" max="0.80" step="0.05" value="0.20" style="width: 80px; accent-color: var(--accent-cyan);">
+                            <span id="lblTestConfVal" style="color: var(--accent-cyan); font-weight: 600; min-width: 32px;">20%</span>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="btnTestPrev" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;"><i class="fa-solid fa-chevron-left"></i> 上一張</button>
+                            <button id="btnTestNext" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;">下一張 <i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
                     </div>
                 </div>
 
