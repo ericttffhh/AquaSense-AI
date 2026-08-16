@@ -700,17 +700,27 @@
             saveCurrentLabels();
         });
 
-        // 鍵盤快速鍵
+        // 鍵盤快速鍵 (1: 三色, 2: 大理石, 3: 銀泰坦, Space/D: 下一張, A: 上一張, C: 清除)
         window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
             if (e.key === '1') {
                 selectClass(0);
             } else if (e.key === '2') {
                 selectClass(1);
-            } else if (e.code === 'Space') {
+            } else if (e.key === '3') {
+                selectClass(2);
+            } else if (e.code === 'Space' || e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
                 e.preventDefault();
                 saveCurrentLabels();
                 if (currentIndex < imagesData.length - 1) {
                     loadImage(currentIndex + 1);
+                }
+            } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                saveCurrentLabels();
+                if (currentIndex > 0) {
+                    loadImage(currentIndex - 1);
                 }
             } else if (e.key === 'c' || e.key === 'C') {
                 currentBoxes = [];
