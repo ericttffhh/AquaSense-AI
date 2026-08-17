@@ -136,9 +136,10 @@ def run_train_thread(model_size='s', epochs=100, imgsz=960):
             mosaic=1.0,
             mixup=0.15,
             cos_lr=True,
-            hsv_h=0.015,
-            hsv_s=0.7,
-            hsv_v=0.4,
+            hsv_h=0.04,   # 增強色相容差 (涵蓋銀白~金黃金輝色澤)
+            hsv_s=0.85,   # 增強飽和度容差 (避免過度依賴色澤，強化菱形體態骨架提取)
+            hsv_v=0.45,   # 增強亮度光影變化容差
+            scale=0.5,
             patience=35,
             exist_ok=True,
             verbose=False

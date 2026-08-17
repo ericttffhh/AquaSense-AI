@@ -49,6 +49,10 @@ results = model.train(
     mosaic=1.0,
     mixup=0.15,
     cos_lr=True,
+    hsv_h=0.04,
+    hsv_s=0.85,
+    hsv_v=0.45,
+    scale=0.5,
     exist_ok=True
 )
 
