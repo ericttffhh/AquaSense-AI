@@ -15,8 +15,8 @@
   
   🔌 硬體接線說明 (ESP32-S3)：
    - pH 感測模組 VCC  -> 5V 或 3.3V (建議使用穩定的 5V/3.3V 獨立供電)
-   - pH 感測模組 GND  -> ESP32-S3 GND
-   - pH 感測模組 AOUT -> ESP32-S3 GPIO 1 (可自訂 PIN_PH_ANALOG)
+   - pH 感測模組 GND  -> ESP32-S3 GND (共地)
+   - pH 感測模組 Po   -> ESP32-S3 GPIO 1 (請接 Po 類比輸出，勿接 Do 數位輸出！)
  ===================================================================================
 */
 
@@ -25,10 +25,10 @@
 #include <ArduinoJson.h>
 
 // ==========================================
-// 1. Wi-Fi 與伺服器設定 (請修改為您的 Wi-Fi 與 Mac IP)
+// 1. Wi-Fi 與伺服器設定
 // ==========================================
-const char* WIFI_SSID     = "YOUR_WIFI_SSID";      // 您的 2.4G Wi-Fi 名稱
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";  // 您的 Wi-Fi 密碼
+const char* WIFI_SSID     = "SF NET";      // 您的 2.4G Wi-Fi 名稱
+const char* WIFI_PASSWORD = "74188893";    // 您的 Wi-Fi 密碼
 
 // 🖥️ AquaSense AI 主機網址 (Mac 的區域網路 IP，Port 為 5000)
 const char* SERVER_URL    = "http://192.168.0.119:5000/api/sensor_upload";
@@ -36,7 +36,7 @@ const char* SERVER_URL    = "http://192.168.0.119:5000/api/sensor_upload";
 // ==========================================
 // 2. 硬體腳位與感測器校準參數
 // ==========================================
-const int PIN_PH_ANALOG = 1;      // ESP32-S3 ADC1 通道腳位 (GPIO 1)
+const int PIN_PH_ANALOG = 1;      // ESP32-S3 ADC1 通道腳位 (GPIO 1 / IO1)
 const int PIN_STATUS_LED = 2;     // 狀態指示燈 (GPIO 2 或板載 LED)
 
 // ⚖️ pH 校準參數 (標準中性 pH 7.0 時的探針輸出電壓，一般約為 1.50V ~ 2.50V)
@@ -88,7 +88,7 @@ void loop() {
     float waterTemp = 26.5;
 
     // 3. 輸出偵錯日誌至 Serial Monitor
-    Serial.printf("[Sensor] 實測 pH: %.2f | 估算水溫: %.1f°C | 時間戳: %lu ms\n", phValue, waterTemp, millis());
+    Serial.printf("📊 [即時診斷] pH: %.2f | 估算水溫: %.1f°C | 時間: %lu ms\n", phValue, waterTemp, millis());
 
     // 4. 發送 HTTP POST 到 AquaSense AI 伺服器
     uploadDataToAquaSense(phValue, waterTemp);
@@ -149,11 +149,12 @@ float readSmoothPH() {
     sum += rawList[i];
   }
   float avgRaw = sum / 10.0;
+
   // 將 ADC Raw (0~4095) 換算為實測電壓 (0 ~ 3.3V)
   float voltage = (avgRaw / 4095.0) * 3.3;
 
-  // 輸出硬體診斷日誌至 Serial Monitor
-  Serial.printf("🔍 [硬體讀取] ADC Raw: %4d / 4095 | 實測電壓: %.3f V", (int)avgRaw, voltage);
+  // 輸出硬體 ADC 診斷日誌至 Serial Monitor (方便檢查是否飽和 3.3V)
+  Serial.printf("🔍 [硬體讀取] ADC Raw: %4d / 4095 | 實測電壓: %.3f V | ", (int)avgRaw, voltage);
 
   // 依據標準 pH 感測電壓線性公式換算
   // 公式：pH = 7.0 + (Voltage - VOLTAGE_PH7) * PH_SLOPE + PH_OFFSET
