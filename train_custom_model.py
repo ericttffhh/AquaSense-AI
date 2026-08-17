@@ -29,22 +29,26 @@ if os.path.exists(existing_weights):
     print("👉 將直接基於此模型權重進行【接續強化微調 (Continual Fine-Tuning)】，消滅背景誤判！")
     model = YOLO(existing_weights)
 else:
-    print("🚀 尚未有既有權重，載入 YOLOv8n 預訓練基底進行 Transfer Learning...")
-    model = YOLO('yolov8n.pt')
+    print("🚀 尚未有既有權重，載入 YOLOv8s 預訓練基底進行深度學習...")
+    model = YOLO('yolov8s.pt')
 
 import torch
 
 device_choice = 0 if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
 print(f"⚡ 訓練運算裝置加速: {device_choice}")
 
-# 開始接續微調訓練 (35 Epochs)
+# 開始接續微調訓練 (100 Epochs, 960px 高階解析度)
 results = model.train(
     data=yaml_path,
-    epochs=35,
-    imgsz=640,
-    batch=16 if torch.cuda.is_available() else 8,
+    epochs=100,
+    imgsz=960,
+    batch=8 if torch.cuda.is_available() else 4,
     device=device_choice,
     name='custom_angelfish_model',
+    fliplr=0.5,
+    mosaic=1.0,
+    mixup=0.15,
+    cos_lr=True,
     exist_ok=True
 )
 
