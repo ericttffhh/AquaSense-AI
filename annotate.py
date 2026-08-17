@@ -476,14 +476,101 @@ def api_model_info():
         'classes': names_dict
     })
 
+class SmoothBoxTracker:
+    """影格時序平滑與目標鎖定追蹤器：徹底消除邊框抖動 (Jitter)、閃爍與類別跳動"""
+    def __init__(self, alpha=0.32, max_missing=8):
+        self.tracks = {}
+        self.next_id = 1
+        self.alpha = alpha
+        self.max_missing = max_missing
+
+    def update(self, raw_boxes):
+        matched_tracks = set()
+        unmatched_boxes = []
+
+        for box in raw_boxes:
+            bx1, by1, bx2, by2, bcls, bconf = box
+            bcx, bcy = (bx1 + bx2) / 2.0, (by1 + by2) / 2.0
+            
+            best_id = None
+            min_dist = float('inf')
+            for tid, t in self.tracks.items():
+                if tid in matched_tracks:
+                    continue
+                tx1, ty1, tx2, ty2 = t['bbox']
+                tcx, tcy = (tx1 + tx2) / 2.0, (ty1 + ty2) / 2.0
+                dist = np.sqrt((bcx - tcx)**2 + (bcy - tcy)**2)
+                
+                # 計算 IOU 交併比
+                ix1, iy1 = max(bx1, tx1), max(by1, ty1)
+                ix2, iy2 = min(bx2, tx2), min(by2, ty2)
+                inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+                union = (bx2 - bx1)*(by2 - by1) + (tx2 - tx1)*(ty2 - ty1) - inter
+                iou = inter / (union + 1e-6)
+
+                if (iou > 0.20 or dist < 110) and dist < min_dist:
+                    min_dist = dist
+                    best_id = tid
+
+            if best_id is not None:
+                matched_tracks.add(best_id)
+                t = self.tracks[best_id]
+                # 指數移動平均平滑 (EMA: 舊座標 68% + 新座標 32%，徹底絲滑鎖定)
+                ox1, oy1, ox2, oy2 = t['bbox']
+                sx1 = self.alpha * bx1 + (1.0 - self.alpha) * ox1
+                sy1 = self.alpha * by1 + (1.0 - self.alpha) * oy1
+                sx2 = self.alpha * bx2 + (1.0 - self.alpha) * ox2
+                sy2 = self.alpha * by2 + (1.0 - self.alpha) * oy2
+                t['bbox'] = (sx1, sy1, sx2, sy2)
+                
+                # 類別鎖定防閃爍
+                if bconf > 0.40 or t['missing'] > 1:
+                    t['cls_id'] = bcls
+                t['conf'] = 0.6 * bconf + 0.4 * t['conf']
+                t['missing'] = 0
+                t['hits'] += 1
+            else:
+                unmatched_boxes.append(box)
+
+        for box in unmatched_boxes:
+            bx1, by1, bx2, by2, bcls, bconf = box
+            self.tracks[self.next_id] = {
+                'bbox': (float(bx1), float(by1), float(bx2), float(by2)),
+                'cls_id': bcls,
+                'conf': bconf,
+                'missing': 0,
+                'hits': 1
+            }
+            self.next_id += 1
+
+        to_del = []
+        for tid, t in self.tracks.items():
+            if tid not in matched_tracks:
+                t['missing'] += 1
+                if t['missing'] > self.max_missing:
+                    to_del.append(tid)
+        for tid in to_del:
+            del self.tracks[tid]
+
+        results = []
+        for tid, t in self.tracks.items():
+            if t['hits'] >= 1:
+                results.append({
+                    'id': tid,
+                    'bbox': (int(t['bbox'][0]), int(t['bbox'][1]), int(t['bbox'][2]), int(t['bbox'][3])),
+                    'cls_id': t['cls_id'],
+                    'conf': t['conf']
+                })
+        return results
+
 def generate_test_stream_frames(source_str):
-    """即時鏡頭 AI 模型推論串流影格生成器 (具備智慧 IP 探測與狀態畫面)"""
+    """即時鏡頭 AI 模型推論串流影格生成器 (具備 EMA 絲滑目標鎖定與智慧重連)"""
     cam_source = int(source_str) if (isinstance(source_str, str) and source_str.isdigit()) else source_str
     
     cap = cv2.VideoCapture(cam_source)
     if not cap.isOpened():
-        # 自動嘗試客戶端手機 IP 與備援 IP
-        for alt in [f"http://192.168.0.116:4747/video", f"http://192.168.0.120:4747/video", 0]:
+        # 自動嘗試備援 IP
+        for alt in [f"http://192.168.0.120:4747/video", f"http://192.168.0.116:4747/video", 0]:
             try:
                 temp_cap = cv2.VideoCapture(alt)
                 if temp_cap.isOpened():
@@ -496,11 +583,11 @@ def generate_test_stream_frames(source_str):
                 pass
 
     model, weights_name = get_trained_model()
+    smooth_tracker = SmoothBoxTracker(alpha=0.30, max_missing=6)
 
     try:
         while True:
             if not cap or not cap.isOpened():
-                # 繪製等待鏡頭連線的提示畫面
                 blank = np.zeros((480, 640, 3), dtype=np.uint8)
                 cv2.putText(blank, "Waiting for DroidCam / Webcam...", (80, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 229, 255), 2)
                 cv2.putText(blank, "Please keep DroidCam App ON and check Wi-Fi IP", (60, 260), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (160, 160, 160), 1)
@@ -519,6 +606,7 @@ def generate_test_stream_frames(source_str):
             if w > 960:
                 frame = cv2.resize(frame, (960, int(h * 960 / w)))
 
+            raw_boxes = []
             if model:
                 results = model(frame, conf=0.25, verbose=False)
                 for r in results:
@@ -526,18 +614,32 @@ def generate_test_stream_frames(source_str):
                         cls_id = int(box.cls[0].item())
                         conf = float(box.conf[0].item())
                         xyxy = box.xyxy[0].tolist()
-                        
-                        if cls_id == 0:
-                            c_name, color = "koi_angelfish (三色)", (118, 230, 0)
-                        elif cls_id == 1:
-                            c_name, color = "marble_angelfish (大理石)", (251, 64, 224)
-                        else:
-                            c_name, color = "silver_titan (銀泰坦)", (255, 229, 0)
-                            
-                        label_str = f"{c_name} {conf*100:.0f}%"
                         x1, y1, x2, y2 = map(int, xyxy)
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-                        cv2.putText(frame, label_str, (x1, max(y1 - 6, 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
+                        raw_boxes.append((x1, y1, x2, y2, cls_id, conf))
+
+            # 經過時序平滑追蹤器鎖定，徹底消除微小抖動與類別瞬跳
+            tracked_fish = smooth_tracker.update(raw_boxes)
+
+            for tf in tracked_fish:
+                cls_id = tf['cls_id']
+                conf = tf['conf']
+                x1, y1, x2, y2 = tf['bbox']
+                
+                if cls_id == 0:
+                    c_name, color = "koi_angelfish (三色)", (118, 230, 0)
+                elif cls_id == 1:
+                    c_name, color = "marble_angelfish (大理石)", (251, 64, 224)
+                else:
+                    c_name, color = "silver_titan (銀泰坦)", (255, 229, 0)
+                    
+                label_str = f"#{tf['id']} {c_name} {conf*100:.0f}%"
+                
+                # 繪製絲滑圓角科技邊框
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                # 繪製標籤背景底色
+                (tw, th), _ = cv2.getTextSize(label_str, cv2.FONT_HERSHEY_SIMPLEX, 0.52, 2)
+                cv2.rectangle(frame, (x1, max(y1 - th - 8, 0)), (x1 + tw + 6, max(y1, th + 8)), (15, 20, 30), -1)
+                cv2.putText(frame, label_str, (x1 + 3, max(y1 - 4, th + 2)), cv2.FONT_HERSHEY_SIMPLEX, 0.52, color, 2)
 
             _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
             frame_bytes = buffer.tobytes()
