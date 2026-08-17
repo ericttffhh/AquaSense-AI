@@ -40,10 +40,11 @@ const char* SERVER_URL    = "http://192.168.0.119:5000/api/sensor_upload";
 const int PIN_PH_ANALOG = 34;     // ESP32 ADC1 類比讀取腳位 (GPIO 34)
 const int PIN_STATUS_LED = 2;     // 板載藍色 LED 狀態指示燈 (GPIO 2)
 
-// ⚖️ pH 校準參數 (標準中性 pH 7.0 時的探針輸出電壓，一般約為 1.50V ~ 2.50V)
-// 提示：若將探針放入中性水中測得電壓為 1.65V，則將 VOLTAGE_PH7 改為 1.65
-float VOLTAGE_PH7 = 1.65;         // pH 7.0 中性基準電壓 (V)
-float PH_SLOPE    = -3.5;         // 每伏特 pH 斜率 (標準探針約為 -3.5 到 -5.9)
+// ⚖️ pH-4502C (5V 供電) 標準校準參數：
+// 1. 中性基準電壓 (VOLTAGE_PH7)：pH-4502C 在 5V 供電下，中性 (pH 7.0) 典型輸出為 2.50V
+// 2. 放大斜率 (PH_SLOPE)：pH-4502C 內部運放放大倍率對應約 -5.70 pH/V
+float VOLTAGE_PH7 = 2.50;         // pH 7.0 中性基準電壓 (V)
+float PH_SLOPE    = -5.70;        // pH-4502C 標準斜率
 float PH_OFFSET   = 0.00;         // 細微偏差補償值
 
 // ⏱️ 上傳時間間隔 (毫秒，預設 3000ms = 3 秒)
