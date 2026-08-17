@@ -544,6 +544,43 @@
                 </ul>
             </div>
 
+            <!-- ESP32-S3 IoT 水質即時感測面板 (pH 酸鹼值 & 水溫) -->
+            <div class="card" style="border-top: 3px solid #00e676; background: rgba(18, 26, 43, 0.85);">
+                <div class="card-header" style="margin-bottom: 10px;">
+                    <span><i class="fa-solid fa-microchip" style="color: #00e676;"></i> ESP32-S3 IoT 水質實時監測</span>
+                    <div id="badgeEspStatus" class="status-badge" style="background: rgba(255,179,0,0.15); color: var(--warning); border: 1px solid rgba(255,179,0,0.3); font-size: 0.75rem; padding: 2px 8px;">
+                        <i class="fa-solid fa-circle-dot"></i> <span id="lblEspStatusText">等待 ESP32-S3 連線</span>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <!-- pH 酸鹼值 -->
+                    <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 10px; border: 1px solid var(--card-border); text-align: center;">
+                        <div style="font-size: 0.78rem; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center;">
+                            <span>💧 pH 酸鹼度</span>
+                            <span style="font-size: 0.7rem; color: var(--accent-cyan);">弱酸佳</span>
+                        </div>
+                        <div id="valIotPh" style="font-size: 2.2rem; font-weight: 700; color: #00e676; margin: 4px 0; font-family: monospace;">6.85</div>
+                        <div id="lblIotPhStatus" style="font-size: 0.72rem; color: #00e676; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🟢 理想弱酸性水質</div>
+                    </div>
+
+                    <!-- 缸內水溫 -->
+                    <div style="background: rgba(0,0,0,0.35); padding: 12px; border-radius: 10px; border: 1px solid var(--card-border); text-align: center;">
+                        <div style="font-size: 0.78rem; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center;">
+                            <span>🌡️ 實測水溫</span>
+                            <span style="font-size: 0.7rem; color: var(--accent-cyan);">26~29°C</span>
+                        </div>
+                        <div id="valIotTemp" style="font-size: 2.2rem; font-weight: 700; color: var(--accent-cyan); margin: 4px 0; font-family: monospace;">26.5°C</div>
+                        <div id="lblIotTempStatus" style="font-size: 0.72rem; color: var(--accent-cyan); font-weight: 600;">🟢 最適神仙魚水溫</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: var(--text-sub); margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
+                    <span>最後更新: <b id="lblIotLastSeen" style="color: var(--text-main);">--:--:--</b></span>
+                    <span>裝置端: <b id="lblIotDevice" style="color: var(--accent-cyan);">ESP32-S3 (ADC1)</b></span>
+                </div>
+            </div>
+
             <!-- 即時生態數據 KPI 網格 -->
             <div class="card">
                 <div class="card-header">
@@ -755,6 +792,33 @@
                 document.getElementById('valClarity').innerText = data.current_clarity;
                 document.getElementById('valActivity').innerText = data.current_activity;
                 document.getElementById('lblAiInsight').innerText = data.ai_insight;
+
+                // ESP32-S3 IoT 水質感測數據更新
+                if (data.iot_sensor) {
+                    const s = data.iot_sensor;
+                    document.getElementById('valIotPh').innerText = Number(s.ph || 6.85).toFixed(2);
+                    document.getElementById('valIotTemp').innerText = `${Number(s.temp || 26.5).toFixed(1)}°C`;
+                    const phStatEl = document.getElementById('lblIotPhStatus');
+                    phStatEl.innerHTML = s.status_text || '🟢 理想弱酸性水質';
+                    phStatEl.style.color = s.status_color || '#00e676';
+                    document.getElementById('valIotPh').style.color = s.status_color || '#00e676';
+                    document.getElementById('lblIotLastSeen').innerText = s.last_updated_time || '--:--:--';
+                    document.getElementById('lblIotDevice').innerText = s.device || 'ESP32-S3';
+
+                    const badge = document.getElementById('badgeEspStatus');
+                    const badgeTxt = document.getElementById('lblEspStatusText');
+                    if (s.connected) {
+                        badge.style.background = 'rgba(0, 230, 118, 0.15)';
+                        badge.style.color = 'var(--success)';
+                        badge.style.borderColor = 'rgba(0, 230, 118, 0.3)';
+                        badgeTxt.innerText = 'ESP32-S3 在線';
+                    } else {
+                        badge.style.background = 'rgba(255, 179, 0, 0.15)';
+                        badge.style.color = 'var(--warning)';
+                        badge.style.borderColor = 'rgba(255, 179, 0, 0.3)';
+                        badgeTxt.innerText = '等待 ESP32-S3 連線';
+                    }
+                }
 
                 // 晝夜節律與飢餓度更新
                 if (data.circadian_mode) {

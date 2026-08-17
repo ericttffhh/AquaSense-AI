@@ -272,6 +272,20 @@ class CameraStreamManager:
             "nutrition": 88      # 索餌進食
         }
 
+        # ESP32-S3 IoT 水質感測器 (pH 酸鹼值 & 水溫)
+        self.iot_sensor = {
+            "ph": 6.85,
+            "temp": 26.5,
+            "device": "ESP32-S3",
+            "last_seen": None,
+            "connected": False,
+            "last_updated_time": "--:--:--",
+            "status_text": "等待 ESP32-S3 連線",
+            "status_color": "var(--warning)",
+            "ph_history": [],
+            "temp_history": []
+        }
+
         self.dashboard_data = {
             "timestamps": [],
             "clarity_history": [],
@@ -295,7 +309,8 @@ class CameraStreamManager:
             "fish_profiles": list(self.fish_profiles.values()),
             "pathology_matrix": self.pathology_matrix,
             "radar_metrics": self.radar_metrics,
-            "health_report_10min": {}
+            "health_report_10min": {},
+            "iot_sensor": dict(self.iot_sensor)
         }
 
         # 3D Demo 擬真動態 4 隻神仙魚群游生態模擬狀態
@@ -857,8 +872,6 @@ class CameraStreamManager:
                     if ret:
                         self.latest_frame_bytes = buffer.tobytes()
                     time.sleep(1.5)
-                    continue
-
             success, frame = cap.read()
             if not success:
                 if cap is not None:
@@ -873,13 +886,84 @@ class CameraStreamManager:
     def get_latest_frame(self):
         return self.latest_frame_bytes
 
+    def update_iot_sensor(self, ph, temp=26.5, device="ESP32-S3"):
+        """接收 ESP32-S3 上傳之 pH 酸鹼值與水溫 IoT 數據並自動進行水質健康評估"""
+        with self.lock:
+            now_t = time.time()
+            now_str = datetime.now().strftime("%H:%M:%S")
+            
+            # 神仙魚最佳水質診斷 (pH 6.5 ~ 7.2 為弱酸性亞馬遜原生環境最優)
+            if 6.5 <= ph <= 7.2:
+                ph_status = "🟢 理想弱酸性水質 (最適合神仙魚)"
+                ph_col = "var(--success)"
+            elif 6.0 <= ph < 6.5:
+                ph_status = "🟡 偏酸性水質 (輕微偏低)"
+                ph_col = "var(--warning)"
+            elif 7.2 < ph <= 7.8:
+                ph_status = "🟡 弱鹼性水質 (略偏高)"
+                ph_col = "var(--warning)"
+            elif ph < 6.0:
+                ph_status = "🔴 過酸警報 (可能硝化酸化)"
+                ph_col = "var(--danger)"
+            else:
+                ph_status = "🔴 過鹼警報 (不利神仙魚)"
+                ph_col = "var(--danger)"
+
+            self.iot_sensor["ph"] = round(ph, 2)
+            self.iot_sensor["temp"] = round(temp, 1)
+            self.iot_sensor["device"] = device
+            self.iot_sensor["last_seen"] = now_t
+            self.iot_sensor["connected"] = True
+            self.iot_sensor["last_updated_time"] = now_str
+            self.iot_sensor["status_text"] = ph_status
+            self.iot_sensor["status_color"] = ph_col
+
+            self.iot_sensor["ph_history"].append({"time": now_str, "ph": round(ph, 2)})
+            if len(self.iot_sensor["ph_history"]) > 30:
+                self.iot_sensor["ph_history"].pop(0)
+
+            self.dashboard_data["iot_sensor"] = dict(self.iot_sensor)
+            print(f"📡 [ESP32-S3 IoT 上傳] pH: {ph:.2f} | 水溫: {temp:.1f}°C | 裝置: {device} | 狀態: {ph_status}")
+
     def get_dashboard_data(self):
         with self.lock:
+            # 檢查 ESP32-S3 心跳是否超時 (若超過 10 秒未回傳則標記離線)
+            if self.iot_sensor.get("last_seen"):
+                if time.time() - self.iot_sensor["last_seen"] > 10.0:
+                    self.iot_sensor["connected"] = False
+                    self.iot_sensor["status_text"] = "⚠️ ESP32-S3 訊號中斷 (離線)"
+                    self.iot_sensor["status_color"] = "var(--text-sub)"
+                    self.dashboard_data["iot_sensor"] = dict(self.iot_sensor)
+
             data = dict(self.dashboard_data)
             data["health_report_10min"] = self.generate_10min_health_report()
             return data
 
 camera_manager = CameraStreamManager()
+
+@app.route('/api/sensor_upload', methods=['POST', 'GET'])
+def api_sensor_upload():
+    """接收 ESP32-S3 上傳之 pH 酸鹼值與水溫 IoT 數據"""
+    if request.method == 'GET':
+        # 支援瀏覽器 GET 快速測試：/api/sensor_upload?ph=6.85&temp=27.0
+        ph = float(request.args.get('ph', 6.85))
+        temp = float(request.args.get('temp', 26.5))
+        device = request.args.get('device', 'ESP32-S3')
+    else:
+        data = request.get_json(silent=True) or request.form.to_dict() or {}
+        ph = float(data.get('ph', data.get('pH', 6.85)))
+        temp = float(data.get('temp', data.get('temperature', 26.5)))
+        device = str(data.get('device', 'ESP32-S3'))
+    
+    camera_manager.update_iot_sensor(ph=ph, temp=temp, device=device)
+    return jsonify({
+        "status": "success",
+        "message": "pH 與水質數據已接收並即時更新至監控儀表板",
+        "ph": ph,
+        "temp": temp,
+        "device": device,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
 
 def gen_frames():
     """MJPEG 視訊串流生成器 (含客戶端斷線安全退出保護)"""
