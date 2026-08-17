@@ -37,8 +37,9 @@ const char* SERVER_URL    = "http://192.168.0.119:5000/api/sensor_upload";
 // 2. 硬體腳位與感測器校準參數
 // ==========================================
 // ⚠️ 標準 ESP32 在開 Wi-Fi 時只能使用 ADC1 腳位 (GPIO 32, 33, 34, 35, 36, 39)
-const int PIN_PH_ANALOG = 34;     // ESP32 ADC1 類比讀取腳位 (GPIO 34)
-const int PIN_STATUS_LED = 2;     // 板載藍色 LED 狀態指示燈 (GPIO 2)
+const int PIN_PH_ANALOG   = 34;   // ESP32 ADC1 類比讀取腳位 (連接 pH-4502C 的 Po 腳)
+const int PIN_TEMP_ANALOG = 35;   // ESP32 ADC1 溫度讀取腳位 (連接 pH-4502C 的 To 腳)
+const int PIN_STATUS_LED  = 2;    // 板載藍色 LED 狀態指示燈 (GPIO 2)
 
 // ⚖️ pH-4502C (5V 供電) 標準校準參數：
 // 1. 中性基準電壓 (VOLTAGE_PH7)：pH-4502C 在 5V 供電下，中性 (pH 7.0) 典型輸出為 2.50V
@@ -56,7 +57,7 @@ void setup() {
   delay(1000);
 
   Serial.println("\n==================================================");
-  Serial.println(" 🐠 AquaSense AI — ESP32 (WROOM-32) pH 感測器啟動中...");
+  Serial.println(" 🐠 AquaSense AI — ESP32 (WROOM-32) pH & 水溫監測啟動...");
   Serial.println("==================================================");
 
   // 初始化板載 LED
@@ -66,6 +67,7 @@ void setup() {
   // 設定 ESP32 ADC 解析度為 12-bit (0 ~ 4095) 與衰減率 (0~3.3V 電壓範圍)
   analogReadResolution(12);
   analogSetPinAttenuation(PIN_PH_ANALOG, ADC_11db);
+  analogSetPinAttenuation(PIN_TEMP_ANALOG, ADC_11db);
 
   // 連接 Wi-Fi
   connectToWiFi();
@@ -86,11 +88,11 @@ void loop() {
     // 1. 採樣並計算 pH 值 (20次多重中值濾波去除水波噪訊)
     float phValue = readSmoothPH();
     
-    // 2. 水溫設定 (若有接 DS18B20 溫度探針可在此讀取，否則預設 26.5°C)
-    float waterTemp = 26.5;
+    // 2. 讀取 pH-4502C 的 To 針腳估算溫度 (若未接則安全回傳 26.5°C)
+    float waterTemp = readSmoothTemp();
 
     // 3. 輸出診斷日誌至 Serial Monitor
-    Serial.printf("📊 [即時診斷] pH: %.2f | 估算水溫: %.1f°C | 時間戳: %lu ms\n", phValue, waterTemp, millis());
+    Serial.printf("📊 [即時診斷] pH: %.2f | 實測水溫: %.1f°C | 時間戳: %lu ms\n", phValue, waterTemp, millis());
 
     // 4. 發送 HTTP POST 到 AquaSense AI 伺服器
     uploadDataToAquaSense(phValue, waterTemp);
@@ -170,7 +172,35 @@ float readSmoothPH() {
 }
 
 // ==========================================
-// 5. 無線上傳至 AquaSense AI 伺服器
+// 5. 讀取 pH-4502C 的 To 溫度腳位 (NTC 熱敏電阻)
+// ==========================================
+float readSmoothTemp() {
+  long sum = 0;
+  for (int i = 0; i < 10; i++) {
+    sum += analogRead(PIN_TEMP_ANALOG);
+    delay(5);
+  }
+  float avgRaw = sum / 10.0;
+
+  // 若未接 To 針腳 (懸空懸浮訊號極小或極大)，安全回傳標準神仙魚水溫 26.5°C
+  if (avgRaw < 150 || avgRaw > 3950) {
+    return 26.5;
+  }
+
+  // NTC 熱敏電阻電壓換算 (pH-4502C 典型分壓 0~3.3V)
+  float voltage = (avgRaw / 4095.0) * 3.3;
+  // 線性分壓近似計算 (以 25°C = 1.65V 為基準)
+  float tempC = 25.0 + (1.65 - voltage) * 26.0;
+
+  // 合理水溫保護 (15.0°C ~ 40.0°C)
+  if (tempC < 15.0) tempC = 15.0;
+  if (tempC > 40.0) tempC = 40.0;
+
+  return tempC;
+}
+
+// ==========================================
+// 6. 無線上傳至 AquaSense AI 伺服器
 // ==========================================
 void uploadDataToAquaSense(float ph, float temp) {
   if (WiFi.status() != WL_CONNECTED) {
