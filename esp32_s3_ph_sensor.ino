@@ -149,9 +149,11 @@ float readSmoothPH() {
     sum += rawList[i];
   }
   float avgRaw = sum / 10.0;
-
   // 將 ADC Raw (0~4095) 換算為實測電壓 (0 ~ 3.3V)
   float voltage = (avgRaw / 4095.0) * 3.3;
+
+  // 輸出硬體診斷日誌至 Serial Monitor
+  Serial.printf("🔍 [硬體讀取] ADC Raw: %4d / 4095 | 實測電壓: %.3f V", (int)avgRaw, voltage);
 
   // 依據標準 pH 感測電壓線性公式換算
   // 公式：pH = 7.0 + (Voltage - VOLTAGE_PH7) * PH_SLOPE + PH_OFFSET
